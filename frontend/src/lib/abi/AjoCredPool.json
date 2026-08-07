@@ -1,0 +1,556 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "validator_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "lendingToken_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "owner_",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableInvalidOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableUnauthorizedAccount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ReentrancyGuardReentrantCall",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "SafeERC20FailedOperation",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "Borrowed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "cap",
+        "type": "uint256"
+      }
+    ],
+    "name": "BorrowingCapSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "Deposited",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "Repaid",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "Withdrawn",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "bytes2",
+            "name": "allowedGroup",
+            "type": "bytes2"
+          },
+          {
+            "internalType": "bytes2",
+            "name": "allowedSubGroup",
+            "type": "bytes2"
+          },
+          {
+            "internalType": "uint8",
+            "name": "minTier",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint8",
+            "name": "minSubTier",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "poolCountryBitmap",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct IAPassComplianceValidator.RuleV2",
+        "name": "rule",
+        "type": "tuple"
+      }
+    ],
+    "name": "addRuleV2FromContract",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "availableLiquidity",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "borrow",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "borrowingCaps",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "borrowings",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "deposit",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "deposits",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getPoolStats",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getRulesV2",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "bytes2",
+            "name": "allowedGroup",
+            "type": "bytes2"
+          },
+          {
+            "internalType": "bytes2",
+            "name": "allowedSubGroup",
+            "type": "bytes2"
+          },
+          {
+            "internalType": "uint8",
+            "name": "minTier",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint8",
+            "name": "minSubTier",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "poolCountryBitmap",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct IAPassComplianceValidator.RuleV2[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "lendingToken",
+    "outputs": [
+      {
+        "internalType": "contract IERC20",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "index",
+        "type": "uint256"
+      }
+    ],
+    "name": "removeRuleV2FromContract",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "repay",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "cap",
+        "type": "uint256"
+      }
+    ],
+    "name": "setBorrowingCap",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "bytes2",
+            "name": "allowedGroup",
+            "type": "bytes2"
+          },
+          {
+            "internalType": "bytes2",
+            "name": "allowedSubGroup",
+            "type": "bytes2"
+          },
+          {
+            "internalType": "uint8",
+            "name": "minTier",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint8",
+            "name": "minSubTier",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "poolCountryBitmap",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct IAPassComplianceValidator.RuleV2",
+        "name": "rule",
+        "type": "tuple"
+      }
+    ],
+    "name": "setRuleV2FromContract",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalBorrowings",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalDeposits",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "validator",
+    "outputs": [
+      {
+        "internalType": "contract IAPassComplianceValidator",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "withdraw",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

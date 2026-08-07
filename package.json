@@ -1,0 +1,10 @@
+{
+  "name": "ajocred-test",
+  "private": true,
+  "workspaces": [
+    "contracts",
+    "backend",
+    "frontend",
+    "shared"
+  ]
+}
