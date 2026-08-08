@@ -67,6 +67,20 @@ export interface UserPoolPosition {
 }
 
 export interface FaucetResult {
-  tx_hash?: string;
-  [key: string]: unknown;
+  chain: string;
+  symbol: string;
+  deposit_address: string;
+  amount: string;
+  tx_hash: string;
+}
+
+export interface DepositAddressResult {
+  address: string;
+  chain: string;
+  txHash: string | null;
+  // On EVM chains USDC and USDT share the same deposit wallet (both fields equal).
+  depositUSDCWallet: string;
+  depositUSDTWallet: string;
+  // Empty on EVM chains (Solana only).
+  aPassAddress: string;
 }

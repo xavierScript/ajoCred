@@ -37,6 +37,17 @@ export class TransactionsService {
   constructor(private readonly cleanverse: CleanverseClientService) {}
 
   async query(params: QueryTxsParams): Promise<QueryTxsResult> {
-    return this.cleanverse.postPlain<QueryTxsResult>('/query_txs', params);
+    const result = await this.cleanverse.postPlain<QueryTxsResult>(
+      '/query_txs',
+      params,
+    );
+    // Cleanverse returns `txs: null` (not []) for wallets with no history, which
+    // violates the declared CleanverseTx[] type and crashes any consumer that
+    // iterates (eligibility filter) or reads .length (frontend). Normalize here
+    // so the contract holds for every caller.
+    return {
+      total_count: result.total_count ?? 0,
+      txs: result.txs ?? [],
+    };
   }
 }

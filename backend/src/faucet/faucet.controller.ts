@@ -1,12 +1,15 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { FaucetService } from './faucet.service';
 
 const DEFAULT_CHAIN = 'base';
-// Empirically confirmed against the live sandbox (Aug 2026): symbol="usdc" succeeds
-// and returns a real tx_hash. symbol="ausdc" consistently reverts with a NoAPass
-// error regardless of the depositAddress used, seemingly a sandbox-side faucet
-// wiring issue on Cleanverse's end. Defaulting to "usdc" per this finding.
-const DEFAULT_SYMBOL = 'usdc';
+// The pool's lendingToken is aUSDC, and the dashboard reads the aUSDC balance —
+// so the faucet MUST deliver "ausdc", not "usdc". Cleanverse's aUSDC faucet reverts
+// with a NoAPass error unless the depositAddress already holds an A-Pass (confirmed
+// via Cleanverse's own guidance). Earlier "ausdc" failures were pre-A-Pass wallets,
+// not a faucet fault. Onboarding generates the A-Pass, so by the time a user reaches
+// the deposit page this succeeds. (symbol="usdc" mints a different token the pool
+// cannot use — it shows in the wallet but not in the app's aUSDC balance.)
+const DEFAULT_SYMBOL = 'ausdc';
 const MAX_AMOUNT = 5;
 
 interface FaucetRequestBody {
@@ -31,6 +34,20 @@ export class FaucetController {
       body.symbol ?? DEFAULT_SYMBOL,
       body.depositAddress,
       amount,
+    );
+  }
+
+  // Alternate funding path: resolve the wallet's deposit address so the user can
+  // fund it from a whitelisted institution faucet (e.g. Circle) when the Cleanverse
+  // aUSDC faucet reservoir is empty.
+  @Get('deposit-address/:address')
+  async depositAddress(
+    @Param('address') address: string,
+    @Query('chain') chain?: string,
+  ) {
+    return this.faucetService.queryDepositAddress(
+      chain ?? DEFAULT_CHAIN,
+      address,
     );
   }
 }
