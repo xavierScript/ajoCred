@@ -11,15 +11,18 @@ import { ComplianceBadge } from "@/components/dashboard/ComplianceBadge";
 import { SegmentedControl } from "@/components/pool/SegmentedControl";
 import { ActionForm } from "@/components/pool/ActionForm";
 import { CapActivation } from "@/components/pool/CapActivation";
-import { usePoolStats, usePoolPosition } from "@/hooks/usePool";
+import { SelectCoopPrompt } from "@/components/SelectCoopPrompt";
+import { usePoolPosition } from "@/hooks/usePool";
 import { useTokenDecimals, useTokenSymbol, useTokenBalance } from "@/hooks/useToken";
-import { useVerify, useEligibility } from "@/hooks/useBackend";
+import { useVerify, useEligibility, useCoopStats } from "@/hooks/useBackend";
+import { useSelectedCoop } from "@/hooks/useSelectedCoop";
 import { formatToken, humanizeError } from "@/lib/utils";
 
 type Mode = "borrow" | "repay";
 
 export function BorrowPage() {
   const { address } = useAccount();
+  const { coopId } = useSelectedCoop();
   const [mode, setMode] = useState<Mode>("borrow");
 
   const { decimals } = useTokenDecimals();
@@ -27,12 +30,18 @@ export function BorrowPage() {
   const dec = decimals as number | undefined;
 
   const balance = useTokenBalance(address);
-  const position = usePoolPosition(address);
-  const stats = usePoolStats();
+  const position = usePoolPosition(coopId ? BigInt(coopId) : undefined, address);
+  const stats = useCoopStats(coopId ?? undefined);
   const verify = useVerify(address);
   const eligibility = useEligibility(address);
 
   const compliant = verify.data?.valid ?? false;
+
+  // A cooperative's lendable pool is its totalLiquidity (base units, string).
+  const poolLiquidity =
+    stats.data?.totalLiquidity !== undefined
+      ? BigInt(stats.data.totalLiquidity)
+      : undefined;
 
   const refetchAll = () => {
     balance.refetch();
@@ -49,20 +58,29 @@ export function BorrowPage() {
       : undefined;
 
   const borrowMax =
-    remainingCap !== undefined && stats.availableLiquidity !== undefined
-      ? remainingCap < stats.availableLiquidity
+    remainingCap !== undefined && poolLiquidity !== undefined
+      ? remainingCap < poolLiquidity
         ? remainingCap
-        : stats.availableLiquidity
+        : poolLiquidity
       : remainingCap;
 
   const capIsZero = position.borrowingCap !== undefined && position.borrowingCap === 0n;
+
+  if (!coopId) {
+    return (
+      <SelectCoopPrompt
+        title="Borrow"
+        description="Borrowing draws from a cooperative's shared pool. Join one to see your limit and borrow."
+      />
+    );
+  }
 
   return (
     <Page>
       <PageHeader
         eyebrow="Credit"
         title="Borrow against your history"
-        description="Draw up to your verified borrowing limit from the shared pool. No collateral required."
+        description="Draw up to your approved limit from your cooperative's shared pool. No collateral required."
         actions={<ComplianceBadge valid={verify.data?.valid} isLoading={verify.isLoading} />}
       />
 
@@ -91,7 +109,7 @@ export function BorrowPage() {
                 />
                 <Stat
                   label="Available in pool"
-                  value={dec !== undefined ? formatToken(stats.availableLiquidity, dec) : undefined}
+                  value={dec !== undefined ? formatToken(poolLiquidity, dec) : undefined}
                   unit={symbol}
                   loading={stats.isLoading || dec === undefined}
                 />
@@ -113,6 +131,7 @@ export function BorrowPage() {
                 eligibility.data.eligible ? (
                   <CapActivation
                     account={address}
+                    coopId={coopId}
                     decimals={dec}
                     symbol={symbol}
                     eligibilityLimit={eligibility.data.borrowingLimit}
@@ -155,6 +174,7 @@ export function BorrowPage() {
             {mode === "borrow" ? (
               <ActionForm
                 action="borrow"
+                coopId={coopId}
                 needsApproval={false}
                 account={address}
                 decimals={dec}
@@ -179,6 +199,7 @@ export function BorrowPage() {
             ) : (
               <ActionForm
                 action="repay"
+                coopId={coopId}
                 needsApproval
                 account={address}
                 decimals={dec}

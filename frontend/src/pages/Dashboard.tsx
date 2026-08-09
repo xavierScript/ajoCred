@@ -12,31 +12,44 @@ import { ComplianceBadge } from "@/components/dashboard/ComplianceBadge";
 import { EligibilityCard } from "@/components/dashboard/EligibilityCard";
 import { TxHistoryTable } from "@/components/dashboard/TxHistoryTable";
 import { DemoControls } from "@/components/dashboard/DemoControls";
+import { ReceiveMoney } from "@/components/dashboard/ReceiveMoney";
+import { SelectCoopPrompt } from "@/components/SelectCoopPrompt";
 import { usePoolPosition } from "@/hooks/usePool";
 import { useTokenDecimals, useTokenSymbol, useTokenBalance } from "@/hooks/useToken";
 import { useEligibility, useTransactions, useVerify } from "@/hooks/useBackend";
+import { useSelectedCoop } from "@/hooks/useSelectedCoop";
 import { formatToken, shortenAddress, humanizeError } from "@/lib/utils";
 
 export function DashboardPage() {
   const { address } = useAccount();
+  const { coopId } = useSelectedCoop();
 
   const { decimals } = useTokenDecimals();
   const { symbol } = useTokenSymbol();
   const { balance, isLoading: balanceLoading } = useTokenBalance(address);
 
-  const position = usePoolPosition(address);
+  const position = usePoolPosition(coopId ? BigInt(coopId) : undefined, address);
   const verify = useVerify(address);
   const eligibility = useEligibility(address);
   const transactions = useTransactions(address);
 
   const dec = decimals as number | undefined;
 
+  if (!coopId) {
+    return (
+      <SelectCoopPrompt
+        title="Your dashboard"
+        description="Your balance, credit limit, and history are tied to a cooperative. Join one to get started."
+      />
+    );
+  }
+
   return (
     <Page>
       <PageHeader
         eyebrow="Dashboard"
-        title="Your position"
-        description="Your verified remittance history, on-chain balances, and available credit."
+        title="Your account"
+        description="The money you've received, your savings in the cooperative, and the credit available to you."
         actions={
           <div className="flex items-center gap-3">
             <ComplianceBadge valid={verify.data?.valid} isLoading={verify.isLoading} />
@@ -62,12 +75,19 @@ export function DashboardPage() {
       {/* Demo Controls (Feature #3) -- hidden unless VITE_ADMIN_KEY is set */}
       {address && <DemoControls address={address} />}
 
+      {/* Receive money — QR + address for inbound transfers */}
+      {address && (
+        <div className="mb-6">
+          <ReceiveMoney address={address} />
+        </div>
+      )}
+
       {/* Top stat ridge */}
       <div className="my-6 grid gap-4 sm:grid-cols-3">
         <Card>
           <CardBody>
             <Stat
-              label={`${symbol ?? "aUSDC"} wallet balance`}
+              label="Available balance"
               value={
                 balanceLoading || dec === undefined
                   ? undefined
@@ -80,7 +100,7 @@ export function DashboardPage() {
         <Card>
           <CardBody>
             <Stat
-              label="Your pool deposit"
+              label="Saved in cooperative"
               value={
                 position.isLoading || dec === undefined
                   ? undefined
@@ -129,7 +149,7 @@ export function DashboardPage() {
         <CardHeader className="flex-row items-center justify-between">
           <CardTitle>
             <History className="mr-2 inline size-4 text-muted-foreground" />
-            Verified remittance history
+            Money you've received
           </CardTitle>
         </CardHeader>
         <CardBody>
@@ -146,8 +166,8 @@ export function DashboardPage() {
           ) : (
             <EmptyState
               icon={<Coins className="size-6" />}
-              title="No remittance history found"
-              description="When you receive inbound aUSDC transfers, check the faucet or start receiving inflows to build your limit."
+              title="No money received yet"
+              description="Once you start receiving money from family and friends, it shows up here and builds your credit limit."
             />
           )}
         </CardBody>

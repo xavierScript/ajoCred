@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
-import { ArrowRight, ShieldCheck, HandCoins, Users } from "lucide-react";
+import { ArrowRight, ShieldCheck, HandCoins, Building2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { HeroPreview } from "@/components/landing/HeroPreview";
@@ -9,6 +9,7 @@ import { StepList } from "@/components/landing/StepList";
 export function LandingPage() {
   const { isConnected } = useAccount();
   const primaryHref = isConnected ? "/dashboard" : "/onboard";
+  const adminUrl = import.meta.env.VITE_ADMIN_URL || "#";
 
   return (
     <>
@@ -16,14 +17,14 @@ export function LandingPage() {
       <section className="container mx-auto grid items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8 lg:py-24">
         <div className="max-w-xl">
           <Badge tone="primary" className="mb-5">
-            Collateral-free credit on Base
+            Collateral-free credit
           </Badge>
           <h1 className="font-display text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-            Your remittance history is your credit history.
+            Your money history is your credit score.
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-muted-foreground">
             Millions receiving money from family abroad have no formal credit
-            score. AjoCred reads your verified inbound remittances and turns that
+            score. AjoCred reads your verified money receipts and turns that
             track record into a borrowing limit — no collateral, no paperwork.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -34,11 +35,14 @@ export function LandingPage() {
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
-              <Link to="/deposit">Provide liquidity</Link>
+              <a href={adminUrl} target={adminUrl !== "#" ? "_blank" : undefined} rel="noreferrer">
+                I represent a cooperative
+                <ExternalLink className="size-4" />
+              </a>
             </Button>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            Base Sepolia testnet · verified via Cleanverse A-Pass
+            Verified identity · Zero paperwork · Instant access
           </p>
         </div>
         <HeroPreview />
@@ -49,11 +53,11 @@ export function LandingPage() {
         <div className="container mx-auto px-4 py-16 sm:px-6 lg:py-20">
           <div className="max-w-2xl">
             <h2 className="font-display text-3xl font-semibold tracking-tight">
-              From remittance receipts to a credit line
+              From receipts to a credit line
             </h2>
             <p className="mt-3 text-muted-foreground">
               Your limit is computed from real, verified money flows — not a
-              guess, and not a deposit you have to lock up first.
+              guess, and not funds you have to lock up first.
             </p>
           </div>
           <StepList />
@@ -64,27 +68,29 @@ export function LandingPage() {
       <section className="container mx-auto grid gap-6 px-4 py-16 sm:px-6 md:grid-cols-2 lg:py-20">
         <AudienceCard
           icon={<HandCoins className="size-5" />}
-          eyebrow="Borrowers"
+          eyebrow="Remittance Recipients"
           title="Borrow against your track record"
           points={[
-            "Verify once with an A-Pass — your identity stays private.",
-            "We read six months of inbound remittances to set a fair cap.",
-            "Draw funds when you need them, repay on your schedule.",
+            "Verify your identity once — fast, private, and simple.",
+            "We check your history of receiving money to set a fair limit.",
+            "Choose a cooperative, borrow when needed, and repay on time.",
           ]}
-          href="/onboard"
+          href={primaryHref}
           cta="Check your limit"
+          isExternal={false}
         />
         <AudienceCard
-          icon={<Users className="size-5" />}
-          eyebrow="Liquidity providers"
-          title="Fund credit that reaches real people"
+          icon={<Building2 className="size-5" />}
+          eyebrow="Cooperative Admins"
+          title="Launch credit for your members"
           points={[
-            "Deposit aUSDC into a compliance-gated pool.",
-            "Every borrower is A-Pass verified before they can draw.",
-            "Withdraw available liquidity at any time.",
+            "Fund a credit pool for your verified community members.",
+            "Set custom borrowing caps and risk tier thresholds.",
+            "Earn returns as members draw and repay their loans.",
           ]}
-          href="/deposit"
-          cta="Provide liquidity"
+          href={adminUrl}
+          cta="Cooperative Portal"
+          isExternal={true}
         />
       </section>
     </>
@@ -98,6 +104,7 @@ function AudienceCard({
   points,
   href,
   cta,
+  isExternal,
 }: {
   icon: React.ReactNode;
   eyebrow: string;
@@ -105,6 +112,7 @@ function AudienceCard({
   points: string[];
   href: string;
   cta: string;
+  isExternal: boolean;
 }) {
   return (
     <div className="flex flex-col rounded-lg border border-border bg-card p-6 sm:p-8">
@@ -127,10 +135,17 @@ function AudienceCard({
       </ul>
       <div className="mt-6">
         <Button asChild variant="outline">
-          <Link to={href}>
-            {cta}
-            <ArrowRight className="size-4" />
-          </Link>
+          {isExternal ? (
+            <a href={href} target={href !== "#" ? "_blank" : undefined} rel="noreferrer">
+              {cta}
+              <ExternalLink className="size-4" />
+            </a>
+          ) : (
+            <Link to={href}>
+              {cta}
+              <ArrowRight className="size-4" />
+            </Link>
+          )}
         </Button>
       </div>
     </div>

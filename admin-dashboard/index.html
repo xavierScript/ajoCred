@@ -4,7 +4,23 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>admin-dashboard</title>
+    <meta
+      name="description"
+      content="AjoCred cooperative console — manage your cooperative's pool, members, and compliance."
+    />
+    <meta name="theme-color" content="#faf8f4" />
+    <title>AjoCred — Cooperative console</title>
+    <script>
+      // Apply the saved/system theme before paint to avoid a flash of the wrong mode.
+      (function () {
+        try {
+          var t = localStorage.getItem("ajocred-theme");
+          if (t === "dark" || (!t && matchMedia("(prefers-color-scheme: dark)").matches)) {
+            document.documentElement.classList.add("dark");
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

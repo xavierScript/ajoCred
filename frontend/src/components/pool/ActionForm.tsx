@@ -13,6 +13,8 @@ type PoolAction = "deposit" | "withdraw" | "borrow" | "repay";
 
 interface ActionFormProps {
   action: PoolAction;
+  /** The cooperative this action runs against — every v2 pool write is coop-scoped. */
+  coopId: string;
   /** deposit & repay pull tokens from the user, so they need an ERC-20 allowance first. */
   needsApproval: boolean;
   account?: Address;
@@ -38,6 +40,7 @@ interface ActionFormProps {
  */
 export function ActionForm({
   action,
+  coopId,
   needsApproval,
   account,
   decimals,
@@ -88,7 +91,7 @@ export function ActionForm({
     if (needsAllowance) {
       approve.approve(parsed);
     } else {
-      write.execute(parsed);
+      write.execute(BigInt(coopId), parsed);
     }
   };
 

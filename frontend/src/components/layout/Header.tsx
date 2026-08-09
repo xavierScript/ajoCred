@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, LayoutDashboard, ArrowDownToLine, ArrowUpFromLine, CreditCard } from "lucide-react";
+import { Menu, X, LayoutDashboard, Users, ArrowUpFromLine, CreditCard } from "lucide-react";
 import { useState } from "react";
 import { Wordmark } from "@/components/Logo";
 import { WalletButton } from "@/components/WalletButton";
@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const nav = [
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { path: "/deposit", label: "Deposit", icon: ArrowDownToLine },
+  { path: "/cooperatives", label: "Cooperatives", icon: Users },
   { path: "/borrow", label: "Borrow", icon: ArrowUpFromLine },
   { path: "/ramp", label: "Fiat Ramp", icon: CreditCard },
 ];

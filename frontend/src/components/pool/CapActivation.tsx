@@ -12,6 +12,8 @@ import { formatAmount, formatToken, parseToken, humanizeError } from "@/lib/util
 
 interface CapActivationProps {
   account: Address;
+  /** The cooperative whose per-member cap is being activated. */
+  coopId: string;
   decimals: number;
   symbol: string;
   /** Human-unit borrowing limit from the off-chain risk engine. */
@@ -31,6 +33,7 @@ interface CapActivationProps {
  */
 export function CapActivation({
   account,
+  coopId,
   decimals,
   symbol,
   eligibilityLimit,
@@ -52,7 +55,7 @@ export function CapActivation({
   const activate = () => {
     if (desiredCap === null) return;
     setCap.mutate(
-      { address: account, cap: desiredCap.toString() },
+      { coopId, address: account, cap: desiredCap.toString() },
       {
         onError: (err) =>
           toast({ tone: "error", title: "Couldn't activate limit", description: humanizeError(err) }),

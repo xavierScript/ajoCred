@@ -1,44 +1,26 @@
-import { useReadContract, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { useCallback } from "react";
 import type { Address } from "viem";
 import { POOL_ADDRESS, CHAIN, poolAbi } from "@/lib/contracts";
 
 /**
- * On-chain pool totals: [totalDeposits, totalBorrowings, availableLiquidity]
- * as token base-unit bigints. Read directly from the contract so the dashboard
- * reflects chain truth (the backend /pool/stats reads the same values).
+ * A member's on-chain position **within one cooperative**: deposit balance,
+ * outstanding borrowing, and owner-set borrowing cap. Every mapping in the v2
+ * pool is keyed by (coopId, address), so all three reads are scoped to the
+ * selected cooperative and batched into one multicall. Read straight from the
+ * chain so the number refreshes the instant a borrow/repay confirms.
  */
-export function usePoolStats() {
-  const { data, isLoading, error, refetch } = useReadContract({
-    address: POOL_ADDRESS,
-    abi: poolAbi,
-    functionName: "getPoolStats",
-    chainId: CHAIN.id,
-  });
-  const [totalDeposits, totalBorrowings, availableLiquidity] =
-    (data as [bigint, bigint, bigint] | undefined) ?? [];
-  return {
-    totalDeposits,
-    totalBorrowings,
-    availableLiquidity,
-    isLoading,
-    error,
-    refetch,
-  };
-}
+export function usePoolPosition(coopId?: bigint, account?: Address) {
+  const enabled = coopId !== undefined && !!account;
+  const args = enabled ? ([coopId, account] as const) : undefined;
 
-/**
- * A wallet's on-chain position: deposit balance, outstanding borrowing, and
- * owner-set borrowing cap. Batched into one multicall.
- */
-export function usePoolPosition(account?: Address) {
   const { data, isLoading, error, refetch } = useReadContracts({
     contracts: [
-      { address: POOL_ADDRESS, abi: poolAbi, functionName: "deposits", args: account ? [account] : undefined, chainId: CHAIN.id },
-      { address: POOL_ADDRESS, abi: poolAbi, functionName: "borrowings", args: account ? [account] : undefined, chainId: CHAIN.id },
-      { address: POOL_ADDRESS, abi: poolAbi, functionName: "borrowingCaps", args: account ? [account] : undefined, chainId: CHAIN.id },
+      { address: POOL_ADDRESS, abi: poolAbi, functionName: "deposits", args, chainId: CHAIN.id },
+      { address: POOL_ADDRESS, abi: poolAbi, functionName: "borrowings", args, chainId: CHAIN.id },
+      { address: POOL_ADDRESS, abi: poolAbi, functionName: "borrowingCaps", args, chainId: CHAIN.id },
     ],
-    query: { enabled: !!account },
+    query: { enabled },
   });
 
   return {
@@ -54,8 +36,9 @@ export function usePoolPosition(account?: Address) {
 type PoolWrite = "deposit" | "withdraw" | "borrow" | "repay";
 
 /**
- * Generic single-amount pool write (deposit/withdraw/borrow/repay), wrapping
- * wagmi's write + receipt wait so callers get one status surface.
+ * Generic pool write (deposit/withdraw/borrow/repay) for a single cooperative,
+ * wrapping wagmi's write + receipt wait so callers get one status surface. Every
+ * v2 pool action takes (coopId, amount).
  */
 export function usePoolAction(fn: PoolWrite) {
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
@@ -66,12 +49,12 @@ export function usePoolAction(fn: PoolWrite) {
   } = useWaitForTransactionReceipt({ hash, chainId: CHAIN.id });
 
   const execute = useCallback(
-    (amount: bigint) => {
+    (coopId: bigint, amount: bigint) => {
       writeContract({
         address: POOL_ADDRESS,
         abi: poolAbi,
         functionName: fn,
-        args: [amount],
+        args: [coopId, amount],
         chainId: CHAIN.id,
       });
     },
