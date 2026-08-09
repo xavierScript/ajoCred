@@ -17,7 +17,7 @@ import { formatAmount, humanizeError } from "@/lib/utils";
 
 export function RampPage() {
   const { address } = useAccount();
-  const [buyOrSell, setBuyOrSell] = useState<"BUY" | "SELL">("BUY");
+  const [buyOrSell, setBuyOrSell] = useState<"BUY" | "SELL">("SELL");
   const [amount, setAmount] = useState(50);
   const [quote, setQuote] = useState<RampQuote | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -69,32 +69,18 @@ export function RampPage() {
   return (
     <Page>
       <PageHeader
-        eyebrow="Fiat Ramp"
-        title="Buy & Sell USDC"
-        description="On-ramp or off-ramp directly via Cleanverse. Requires a verified, non-frozen A-Pass."
+        eyebrow="Bank Transfer"
+        title="Withdraw to Bank & Cash In"
+        description="Cash out your funds to your local bank account or add funds using standard payment options."
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Get a Ramp Quote</CardTitle>
+            <CardTitle>Transfer Quote</CardTitle>
           </CardHeader>
           <CardBody className="space-y-5">
             <div className="flex rounded-md border border-border p-1 bg-muted/50">
-              <button
-                type="button"
-                onClick={() => {
-                  setBuyOrSell("BUY");
-                  setQuote(null);
-                }}
-                className={`flex-1 rounded-sm py-1.5 text-sm font-medium transition-colors ${
-                  buyOrSell === "BUY"
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Buy USDC (On-ramp)
-              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -107,13 +93,27 @@ export function RampPage() {
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                Sell USDC (Off-ramp)
+                Withdraw to Bank
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setBuyOrSell("BUY");
+                  setQuote(null);
+                }}
+                className={`flex-1 rounded-sm py-1.5 text-sm font-medium transition-colors ${
+                  buyOrSell === "BUY"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Add Funds
               </button>
             </div>
 
             <div>
               <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {buyOrSell === "BUY" ? "Fiat Amount (USD)" : "USDC Amount"}
+                Amount (USD)
               </label>
               <Input
                 type="number"
@@ -132,7 +132,7 @@ export function RampPage() {
               disabled={rampQuote.isPending || !amount || amount <= 0}
               onClick={handleGetQuote}
             >
-              {rampQuote.isPending ? "Getting quote..." : "Get Live Quote"}
+              {rampQuote.isPending ? "Getting quote..." : "Get Transfer Quote"}
             </Button>
 
             {rampQuote.isError && (
@@ -144,20 +144,14 @@ export function RampPage() {
             {quote && (
               <div className="space-y-3 rounded-md border border-border bg-muted/30 p-4">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Quoted payout</span>
+                  <span className="text-muted-foreground">You will receive</span>
                   <span className="font-mono font-medium">
-                    {buyOrSell === "BUY"
-                      ? `${formatAmount(quote.cryptoAmount)} USDC`
-                      : `$${formatAmount(quote.fiatAmount)} USD`}
+                    ${formatAmount(quote.fiatAmount)} USD
                   </span>
                 </div>
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Total fee</span>
+                  <span>Transfer fee</span>
                   <span className="font-mono">${formatAmount(quote.totalFee)}</span>
-                </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Rate</span>
-                  <span className="font-mono">1 USDC = ${quote.conversionPrice}</span>
                 </div>
                 <Button
                   variant="primary"
@@ -165,7 +159,7 @@ export function RampPage() {
                   disabled={rampWidget.isPending}
                   onClick={handleCreateWidget}
                 >
-                  {rampWidget.isPending ? "Launching Widget..." : "Proceed to Checkout"}
+                  {rampWidget.isPending ? "Launching Transfer..." : "Proceed to Transfer"}
                   <ArrowRight className="size-4" />
                 </Button>
               </div>
@@ -175,17 +169,17 @@ export function RampPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Order Status Tracker</CardTitle>
+            <CardTitle>Transfer Status Tracker</CardTitle>
           </CardHeader>
           <CardBody className="space-y-4">
             {!orderId ? (
               <p className="text-sm text-muted-foreground">
-                No active order. Request a quote and click "Proceed to Checkout" to launch the ramp widget and track status.
+                No active transfer. Request a quote and click "Proceed to Transfer" to open the payment window and track your status.
               </p>
             ) : (
               <div className="space-y-4">
                 <div className="rounded-md border border-border bg-muted/20 p-3 text-xs">
-                  <span className="text-muted-foreground">Cleanverse Order ID: </span>
+                  <span className="text-muted-foreground">Transfer Reference: </span>
                   <span className="font-mono font-medium">{orderId}</span>
                 </div>
 
@@ -196,14 +190,14 @@ export function RampPage() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                   >
-                    Re-open Widget Window
+                    Re-open Transfer Window
                     <ExternalLink className="size-3" />
                   </a>
                 )}
 
                 {rampOrder.isLoading ? (
                   <p className="text-xs text-muted-foreground animate-pulse">
-                    Polling order status...
+                    Checking transfer status...
                   </p>
                 ) : rampOrder.isError ? (
                   <p className="text-xs text-destructive">
@@ -231,12 +225,9 @@ export function RampPage() {
 
                     <div className="space-y-1.5 text-xs text-muted-foreground">
                       <p>
-                        Type: <span className="font-medium text-foreground">{rampOrder.data.buyOrSell}</span>
-                      </p>
-                      <p>
-                        Amount:{" "}
+                        Transfer Amount:{" "}
                         <span className="font-medium text-foreground">
-                          ${rampOrder.data.fiatAmount} USD / {rampOrder.data.cryptoAmount} USDC
+                          ${rampOrder.data.fiatAmount} USD
                         </span>
                       </p>
                     </div>
@@ -258,11 +249,11 @@ function displayStatus(status: string) {
     case "AWAITING_PAYMENT_FROM_USER":
       return "Awaiting Payment";
     case "PAYMENT_DONE_MARKED_BY_USER":
-      return "Payment Marked";
+      return "Payment Processing";
     case "PROCESSING":
       return "Processing";
     case "PENDING_DELIVERY_FROM_TRANSAK":
-      return "Delivering";
+      return "Delivering Funds";
     case "COMPLETED":
       return "Completed";
     default:

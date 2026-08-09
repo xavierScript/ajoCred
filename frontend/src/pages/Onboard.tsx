@@ -46,8 +46,8 @@ export function OnboardPage() {
       await generate.mutateAsync(address);
       toast({
         tone: "success",
-        title: "A-Pass created",
-        description: "Your identity has been verified.",
+        title: "Identity verified",
+        description: "Your account is now verified.",
       });
       // Refetch to pick up the new pass
       await refetchApass();
@@ -63,7 +63,7 @@ export function OnboardPage() {
         <PageHeader
           eyebrow="Onboarding"
           title="Verify your identity"
-          description="We'll check your compliance status with an A-Pass from Cleanverse."
+          description="We'll confirm your identity verification status."
         />
         <Card>
           <CardBody className="flex items-center justify-center py-12">
@@ -89,14 +89,14 @@ export function OnboardPage() {
     );
   }
 
-  // No A-Pass yet — show the generate flow
+  // No verification yet — show the generate flow
   if (apassNotFound || !apass) {
     return (
       <Page>
         <PageHeader
           eyebrow="Onboarding"
           title="Verify your identity"
-          description="AjoCred uses Cleanverse A-Pass to confirm you're a real, compliant person without exposing your identity on-chain."
+          description="AjoCred uses secure identity verification to confirm you're a real, eligible person without exposing your private details."
         />
 
         <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
@@ -106,25 +106,24 @@ export function OnboardPage() {
                 <CheckCircle2 className="size-6" />
               </div>
               <div>
-                <h3 className="font-display text-lg font-semibold">What is an A-Pass?</h3>
+                <h3 className="font-display text-lg font-semibold">How does verification work?</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  An A-Pass is a one-time identity verification from Cleanverse. It proves you meet
-                  compliance requirements (KYC/AML) without revealing your personal details to the
-                  blockchain or to AjoCred.
+                  Verification is a one-time check that proves you meet basic security and regulatory
+                  requirements without revealing your personal details to others or to AjoCred.
                 </p>
               </div>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex gap-2">
                   <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
-                  <span>One-time verification; no recurring checks</span>
+                  <span>One-time check; no recurring paperwork</span>
                 </li>
                 <li className="flex gap-2">
                   <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
-                  <span>Your identity stays private</span>
+                  <span>Your personal details stay private</span>
                 </li>
                 <li className="flex gap-2">
                   <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
-                  <span>Valid across all AjoCred interactions</span>
+                  <span>Unlocks credit access across AjoCred</span>
                 </li>
               </ul>
             </CardBody>
@@ -135,8 +134,7 @@ export function OnboardPage() {
               <div>
                 <h3 className="font-display text-xl font-semibold">Ready to verify?</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Click below to generate your A-Pass. The process is handled by Cleanverse and
-                  takes a few seconds.
+                  Click below to verify your account identity. The process takes just a few seconds.
                 </p>
               </div>
 
@@ -146,7 +144,7 @@ export function OnboardPage() {
                 loading={generate.isPending}
                 disabled={!address}
               >
-                Generate A-Pass
+                Verify Identity
               </Button>
 
               {generate.isError && (
@@ -167,13 +165,11 @@ export function OnboardPage() {
     );
   }
 
-  // Has an A-Pass but the compliance check didn't pass (edge case: pass exists but
-  // the validator rejects). Rare, but surface it rather than looping on the redirect.
   const compliant = verify?.valid ?? false;
 
   return (
     <Page>
-      <PageHeader eyebrow="Onboarding" title="A-Pass status" />
+      <PageHeader eyebrow="Onboarding" title="Verification status" />
       <Card>
         <CardBody className="space-y-6">
           <div className="flex items-start gap-4">
@@ -196,13 +192,13 @@ export function OnboardPage() {
                   {compliant ? "You're verified" : "Verification pending"}
                 </h3>
                 <Badge tone={compliant ? "success" : "warning"} dot>
-                  {compliant ? "Compliant" : "Not compliant"}
+                  {compliant ? "Verified" : "Pending"}
                 </Badge>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
                 {compliant
-                  ? "Your A-Pass is active and you meet all compliance requirements. You can now borrow from the AjoCred pool."
-                  : "Your A-Pass exists but the compliance check did not pass. This may be temporary — try refreshing or contact support if the issue persists."}
+                  ? "Your account identity is verified and active. You can now borrow from your cooperative."
+                  : "Your verification is pending or requires attention. Try refreshing or contact support if this persists."}
               </p>
             </div>
           </div>

@@ -102,7 +102,7 @@ export function BorrowPage() {
               />
               <div className="grid grid-cols-2 gap-4 border-t border-border pt-4">
                 <Stat
-                  label="On-chain cap"
+                  label="Approved credit limit"
                   value={dec !== undefined ? formatToken(position.borrowingCap, dec) : undefined}
                   unit={symbol}
                   loading={position.isLoading || dec === undefined}
@@ -144,7 +144,7 @@ export function BorrowPage() {
                     <div>
                       <p className="text-sm font-medium">No borrowing limit yet</p>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        You need verified inbound remittances to unlock credit.{" "}
+                        You need verified incoming money transfers to unlock credit.{" "}
                         <Link to="/dashboard" className="text-primary hover:underline">
                           View your history
                         </Link>
@@ -189,9 +189,9 @@ export function BorrowPage() {
                   verify.isLoading
                     ? undefined
                     : !compliant
-                      ? "You must be compliance-verified to borrow. Complete verification first."
+                      ? "Your identity must be verified before borrowing. Complete verification first."
                       : capIsZero
-                        ? "Activate your borrowing limit on-chain before borrowing."
+                        ? "Activate your credit limit before borrowing."
                         : undefined
                 }
                 onSuccess={refetchAll}

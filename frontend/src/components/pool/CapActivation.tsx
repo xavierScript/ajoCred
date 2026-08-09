@@ -83,11 +83,11 @@ export function CapActivation({
             <ShieldCheck className="size-5" />
           </div>
           <div>
-            <p className="text-sm font-medium">On-chain borrowing limit</p>
+            <p className="text-sm font-medium">Active credit limit</p>
             <p className="text-xs text-muted-foreground">
               {isActivated
-                ? "Your limit is active on-chain."
-                : "Activate your limit on-chain before borrowing."}
+                ? "Your credit limit is active and ready."
+                : "Activate your credit limit before borrowing."}
             </p>
           </div>
         </div>
@@ -100,7 +100,7 @@ export function CapActivation({
           unit={symbol}
         />
         <Stat
-          label="Active on-chain"
+          label="Active limit"
           value={formatToken(onChainCap, decimals)}
           unit={symbol}
         />
@@ -109,7 +109,7 @@ export function CapActivation({
       {!isActivated && (
         <Button block onClick={activate} loading={busy} disabled={desiredCap === null}>
           <Zap className="size-4" />
-          Activate borrowing limit
+          Activate credit limit
         </Button>
       )}
 
@@ -128,7 +128,6 @@ export function CapActivation({
 function safeParse(human: number, decimals: number): bigint | null {
   if (!Number.isFinite(human) || human <= 0) return null;
   try {
-    // Bound to the token's precision so parseUnits never sees excess decimals.
     return parseToken(human.toFixed(decimals), decimals);
   } catch {
     return null;

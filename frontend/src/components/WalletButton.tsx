@@ -3,19 +3,9 @@ import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { AuthButton } from "@coinbase/cdp-react/components/AuthButton";
 import { useSignOut } from "@coinbase/cdp-hooks";
 import { CDP_CONNECTOR_ID } from "@coinbase/cdp-wagmi";
-import { ChevronDown, LogOut, Wallet } from "lucide-react";
+import { ChevronDown, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
-
-/**
- * Wallet control for AjoCred. Offers two ways to connect, styled to the AjoCred
- * system:
- *   1. Email sign-in via the CDP embedded wallet (preferred, no seed phrase).
- *   2. Normal external wallets (MetaMask / injected, Coinbase, WalletConnect).
- *
- * Both resolve to a standard wagmi connection, so the rest of the app reads the
- * account through `useAccount` without caring how the user got here.
- */
 
 const cdpConfigured = Boolean(import.meta.env.VITE_CDP_PROJECT_ID);
 
@@ -23,16 +13,10 @@ function shortenAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
-/** Small full-screen click-catcher so the dropdown closes on an outside click. */
 function Backdrop({ onClose }: { onClose: () => void }) {
   return <div className="fixed inset-0 z-40" aria-hidden onClick={onClose} />;
 }
 
-/**
- * Sign-out control for an embedded (CDP) wallet: ends the CDP session first,
- * then clears wagmi. Only rendered when the active connector is the CDP one, so
- * the cdp-hooks context is guaranteed to be present.
- */
 function CdpSignOut({ onDone }: { onDone: () => void }) {
   const { signOut } = useSignOut();
   const { disconnect } = useDisconnect();
@@ -83,7 +67,7 @@ function ConnectedMenu({
           <Backdrop onClose={() => setOpen(false)} />
           <div className="absolute right-0 z-50 mt-2 w-60 rounded-lg border border-border bg-card p-3 shadow-lg">
             <p className="mb-1 text-xs font-medium text-muted-foreground">
-              Connected wallet
+              Connected account
             </p>
             <p className="mb-3 break-all font-mono text-xs">{address}</p>
             {isCdp ? (
@@ -99,7 +83,7 @@ function ConnectedMenu({
                 }}
               >
                 <LogOut className="size-4" />
-                Disconnect
+                Sign out
               </Button>
             )}
           </div>
@@ -113,8 +97,6 @@ function ConnectMenu({ compact }: { compact: boolean }) {
   const [open, setOpen] = useState(false);
   const { connect, connectors } = useConnect();
 
-  // The CDP embedded wallet is reached through the email sign-in button below,
-  // not through the external-wallet list.
   const externalConnectors = connectors.filter(
     (c) => c.id !== CDP_CONNECTOR_ID,
   );
@@ -122,8 +104,8 @@ function ConnectMenu({ compact }: { compact: boolean }) {
   return (
     <div className="relative">
       <Button onClick={() => setOpen((o) => !o)} size={compact ? "sm" : "md"}>
-        <Wallet className="size-4" />
-        Connect wallet
+        <User className="size-4" />
+        Sign in
       </Button>
 
       {open && (
@@ -135,8 +117,6 @@ function ConnectMenu({ compact }: { compact: boolean }) {
                 <p className="mb-2 text-xs font-medium text-muted-foreground">
                   Sign in with email
                 </p>
-                {/* CDP renders its own sign-in modal; on success the connector
-                    emits `connect` and this menu is replaced by ConnectedMenu. */}
                 <AuthButton />
                 <div className="mt-3 flex items-center gap-2">
                   <span className="h-px flex-1 bg-border" />
@@ -149,7 +129,7 @@ function ConnectMenu({ compact }: { compact: boolean }) {
             )}
 
             <p className="mb-2 text-xs font-medium text-muted-foreground">
-              Connect a wallet
+              External account options
             </p>
             <div className="space-y-1.5">
               {externalConnectors.map((c) => (

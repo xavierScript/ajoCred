@@ -17,7 +17,7 @@ export function ComplianceBadge({
     return (
       <Badge tone="neutral">
         <ShieldQuestion className="size-3.5" />
-        Checking compliance…
+        Checking verification…
       </Badge>
     );
   }
@@ -26,7 +26,7 @@ export function ComplianceBadge({
     return (
       <Badge tone="success" dot>
         <ShieldCheck className="size-3.5" />
-        Compliance verified
+        Identity verified
       </Badge>
     );
   }
@@ -34,7 +34,7 @@ export function ComplianceBadge({
   return (
     <Badge tone="warning" dot>
       <ShieldAlert className="size-3.5" />
-      Not verified
+      Verification pending
     </Badge>
   );
 }

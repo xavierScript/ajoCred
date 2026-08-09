@@ -56,14 +56,14 @@ export function DashboardPage() {
             <Button asChild variant="outline" size="sm">
               <Link to="/ramp">
                 <CreditCard className="size-3.5" />
-                Fiat Ramp
+                Withdraw to Bank
               </Link>
             </Button>
           </div>
         }
       />
 
-      {/* Wallet address strip */}
+      {/* Account address strip */}
       {address && (
         <div className="mb-6 inline-flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-sm">
           <Wallet className="size-4 text-muted-foreground" />
@@ -72,7 +72,7 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Demo Controls (Feature #3) -- hidden unless VITE_ADMIN_KEY is set */}
+      {/* Demo Controls -- hidden unless VITE_ADMIN_KEY is set */}
       {address && <DemoControls address={address} />}
 
       {/* Receive money — QR + address for inbound transfers */}
@@ -93,7 +93,7 @@ export function DashboardPage() {
                   ? undefined
                   : formatToken(balance, dec)
               }
-              unit={symbol ?? "aUSDC"}
+              unit={symbol ?? "USD"}
             />
           </CardBody>
         </Card>
@@ -106,7 +106,7 @@ export function DashboardPage() {
                   ? undefined
                   : formatToken(position.deposit, dec)
               }
-              unit={symbol ?? "aUSDC"}
+              unit={symbol ?? "USD"}
             />
           </CardBody>
         </Card>
@@ -119,7 +119,7 @@ export function DashboardPage() {
                   ? undefined
                   : formatToken(position.borrowing, dec)
               }
-              unit={symbol ?? "aUSDC"}
+              unit={symbol ?? "USD"}
             />
           </CardBody>
         </Card>
@@ -135,7 +135,7 @@ export function DashboardPage() {
           </Card>
         ) : eligibility.isError ? (
           <ErrorState
-            title="Couldn't load eligibility"
+            title="Couldn't load credit eligibility"
             message={humanizeError(eligibility.error)}
             onRetry={eligibility.refetch}
           />

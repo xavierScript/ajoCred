@@ -8,8 +8,6 @@ import {
   Sun,
   Sliders,
   Building2,
-  AlertCircle,
-  CheckCircle2,
 } from "lucide-react";
 import { Page, PageHeader } from "@/components/layout/Page";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -54,7 +52,7 @@ export function MembersRiskPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchAddress || !searchAddress.startsWith("0x")) {
-      toast({ tone: "error", title: "Invalid address", description: "Enter a valid 0x wallet address." });
+      toast({ tone: "error", title: "Invalid address", description: "Enter a valid account address." });
       return;
     }
     setActiveMember(searchAddress.trim());
@@ -75,13 +73,13 @@ export function MembersRiskPage() {
       toast({
         tone: "success",
         title: "Borrowing limit updated",
-        description: `Set limit of ${capInput} ${symbol} for ${shortenAddress(activeMember)}.`,
+        description: `Set credit limit of ${capInput} ${symbol} for ${shortenAddress(activeMember)}.`,
       });
 
       position.refetch();
       setCapInput("");
     } catch (err) {
-      toast({ tone: "error", title: "Failed to update cap", description: humanizeError(err) });
+      toast({ tone: "error", title: "Failed to update limit", description: humanizeError(err) });
     }
   };
 
@@ -92,7 +90,7 @@ export function MembersRiskPage() {
       toast({
         tone: "warning",
         title: "Account frozen",
-        description: `Frozen A-Pass status for ${shortenAddress(activeMember)}. Compliance verification revoked.`,
+        description: `Frozen verification status for ${shortenAddress(activeMember)}. Verification revoked.`,
       });
       verify.refetch();
     } catch (err) {
@@ -107,7 +105,7 @@ export function MembersRiskPage() {
       toast({
         tone: "success",
         title: "Account unfrozen",
-        description: `Restored A-Pass status for ${shortenAddress(activeMember)}.`,
+        description: `Restored verification status for ${shortenAddress(activeMember)}.`,
       });
       verify.refetch();
     } catch (err) {
@@ -144,7 +142,7 @@ export function MembersRiskPage() {
       <PageHeader
         eyebrow={`Cooperative #${selectedCoopId}`}
         title="Member Risk Inspector & Controls"
-        description="Inspect borrowing history, evaluate remittance creditworthiness, adjust borrowing limits, and handle defaults."
+        description="Inspect borrowing history, evaluate creditworthiness, adjust borrowing limits, and handle defaults."
       />
 
       {/* Search Bar */}
@@ -155,7 +153,7 @@ export function MembersRiskPage() {
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Enter member wallet address (0x...)"
+                placeholder="Enter member account address (0x...)"
                 className="h-11 w-full rounded-md border border-input bg-background pl-9 pr-4 text-sm outline-none transition-colors focus:border-primary"
                 value={searchAddress}
                 onChange={(e) => setSearchAddress(e.target.value)}
@@ -171,7 +169,7 @@ export function MembersRiskPage() {
       {!activeMember ? (
         <div className="rounded-lg border border-dashed border-border p-12 text-center text-muted-foreground">
           <UserCheck className="mx-auto size-8 opacity-50" />
-          <p className="mt-3 text-sm">Enter a member's address above to view position, eligibility, and risk controls.</p>
+          <p className="mt-3 text-sm">Enter a member's address above to view position, credit history, and controls.</p>
         </div>
       ) : (
         <div className="grid gap-8 lg:grid-cols-2">
@@ -181,13 +179,13 @@ export function MembersRiskPage() {
               <CardHeader className="flex-row items-center justify-between">
                 <div className="flex items-center gap-2">
                   <UserCheck className="size-5 text-primary" />
-                  <CardTitle>Member Position & Compliance</CardTitle>
+                  <CardTitle>Member Position & Status</CardTitle>
                 </div>
                 {verify.isLoading ? (
                   <Skeleton className="h-6 w-20" />
                 ) : (
                   <Badge tone={isFrozen ? "destructive" : "success"} dot>
-                    {isFrozen ? "Frozen / Defaulted" : "Compliant"}
+                    {isFrozen ? "Frozen / Defaulted" : "Verified"}
                   </Badge>
                 )}
               </CardHeader>
@@ -223,7 +221,7 @@ export function MembersRiskPage() {
             {/* Creditworthiness Breakdown */}
             <Card>
               <CardHeader>
-                <CardTitle>Cleanverse Inflow & Eligibility</CardTitle>
+                <CardTitle>Verified Inbound History & Eligibility</CardTitle>
               </CardHeader>
               <CardBody className="space-y-3 text-sm">
                 {eligibility.isLoading ? (
@@ -237,20 +235,20 @@ export function MembersRiskPage() {
                       </span>
                     </div>
                     <div className="flex items-center justify-between border-b border-border pb-2">
-                      <span className="text-muted-foreground">Verified Total Inflow</span>
+                      <span className="text-muted-foreground">Verified Total Received</span>
                       <span>{formatAmount(eligibility.data.breakdown.totalInflow)} USD</span>
                     </div>
                     <div className="flex items-center justify-between border-b border-border pb-2">
-                      <span className="text-muted-foreground">Unique Remittance Senders</span>
+                      <span className="text-muted-foreground">Unique Senders</span>
                       <span>{eligibility.data.breakdown.uniqueSenders} senders</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Qualifying Receipts</span>
-                      <span>{eligibility.data.breakdown.inflowTxCount} receipts</span>
+                      <span className="text-muted-foreground">Qualifying Transfers</span>
+                      <span>{eligibility.data.breakdown.inflowTxCount} transfers</span>
                     </div>
                   </>
                 ) : (
-                  <p className="text-xs text-muted-foreground">No remittance record found for this address.</p>
+                  <p className="text-xs text-muted-foreground">No money transfer record found for this address.</p>
                 )}
               </CardBody>
             </Card>
@@ -262,13 +260,13 @@ export function MembersRiskPage() {
             <Card>
               <CardHeader className="flex-row items-center gap-2">
                 <Sliders className="size-5 text-accent" />
-                <CardTitle>Set Member Borrowing Cap</CardTitle>
+                <CardTitle>Set Member Borrowing Limit</CardTitle>
               </CardHeader>
               <CardBody>
                 <form onSubmit={handleSetCap} className="space-y-4">
                   <Input
-                    label={`Max Borrowing Cap (${symbol})`}
-                    hint="Calculated on-chain credit ceiling for this member in this coop."
+                    label={`Max Borrowing Limit (${symbol})`}
+                    hint="Calculated credit ceiling for this member in this coop."
                     type="number"
                     placeholder="e.g. 500"
                     value={capInput}
@@ -282,7 +280,7 @@ export function MembersRiskPage() {
                     loading={setCapMutation.isPending}
                     disabled={!capInput || dec === undefined}
                   >
-                    Set On-Chain Borrowing Limit
+                    Set Member Credit Limit
                   </Button>
                 </form>
               </CardBody>
@@ -296,7 +294,7 @@ export function MembersRiskPage() {
               </CardHeader>
               <CardBody className="space-y-4">
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  Freezing a defaulted borrower's A-Pass immediately revokes compliance verification across all AjoCred contract interactions (`deposit`, `borrow`, `withdraw`).
+                  Freezing a defaulted borrower's account immediately revokes access across all cooperative contract interactions.
                 </p>
 
                 {isFrozen ? (
@@ -307,7 +305,7 @@ export function MembersRiskPage() {
                     loading={unfreezeMutation.isPending}
                   >
                     <Sun className="size-4" />
-                    Restore A-Pass / Unfreeze Member
+                    Restore Verification / Unfreeze Member
                   </Button>
                 ) : (
                   <div className="space-y-3">
@@ -324,7 +322,7 @@ export function MembersRiskPage() {
                       loading={freezeMutation.isPending}
                     >
                       <Snowflake className="size-4" />
-                      Freeze A-Pass (Mark Defaulted)
+                      Freeze Account (Mark Defaulted)
                     </Button>
                   </div>
                 )}
