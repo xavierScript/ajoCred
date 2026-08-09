@@ -10,13 +10,13 @@ import { humanizeError } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 /**
- * Testnet convenience: request sandbox aUSDC so a user can actually deposit/repay
- * on Base Sepolia. Not part of the production lending flow — clearly labeled as such.
+ * Testnet convenience: request sandbox aUSDC so an admin or user can deposit/repay
+ * on Base Sepolia.
  *
  * Two funding paths:
  *  1. Primary — the Cleanverse aUSDC faucet (Request button).
  *  2. Fallback — the wallet's deposit address, fundable from a whitelisted
- *     institution faucet (e.g. Circle). Used when the faucet reservoir is drained.
+ *     institution faucet (e.g. Circle). Automatically revealed if primary fails.
  */
 export function FaucetCard({
   account,
@@ -40,14 +40,23 @@ export function FaucetCard({
       });
       onFunded?.();
     } catch (err) {
-      toast({ tone: "error", title: "Faucet request failed", description: humanizeError(err) });
+      // If faucet fails, automatically reveal and trigger deposit address query
+      setShowDeposit(true);
+      if (!deposit.data && !deposit.isFetching) {
+        void deposit.refetch();
+      }
+      toast({
+        tone: "error",
+        title: "Faucet request failed",
+        description: `${humanizeError(err)} You can fund manually via your Cleanverse deposit address below.`,
+      });
     }
   };
 
   const toggleDeposit = () => {
     const next = !showDeposit;
     setShowDeposit(next);
-    // Fetch on first expand only; the address is stable so it's cached thereafter.
+    // Fetch on expand; address is stable
     if (next && !deposit.data && !deposit.isFetching) {
       void deposit.refetch();
     }
@@ -60,7 +69,7 @@ export function FaucetCard({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">Need test aUSDC?</p>
           <p className="text-xs text-muted-foreground">
-            Request sandbox tokens to try deposits on Base Sepolia.
+            Request sandbox tokens to try pool funding on Base Sepolia.
           </p>
         </div>
         <Button size="sm" variant="outline" onClick={request} loading={faucet.isPending}>
@@ -68,14 +77,14 @@ export function FaucetCard({
         </Button>
       </div>
 
-      {/* Fallback funding path — collapsed by default */}
+      {/* Fallback funding path — expandable by click */}
       <div className="mt-3 border-t border-border pt-3">
         <button
           onClick={toggleDeposit}
           aria-expanded={showDeposit}
           className="flex w-full items-center justify-between text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
-          <span>Faucet empty? Fund via your deposit address</span>
+          <span>Faucet empty? Fund via your Cleanverse deposit address</span>
           <ChevronDown
             className={cn("size-4 transition-transform", showDeposit && "rotate-180")}
           />

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/pool/SegmentedControl";
 import { AmountField } from "@/components/pool/AmountField";
 import { TxStatus } from "@/components/pool/TxStatus";
+import { FaucetCard } from "@/components/pool/FaucetCard";
 import { useAdminCoop } from "@/hooks/useAdminCoop";
 import { useCoopStats } from "@/hooks/useBackend";
 import {
@@ -123,7 +124,7 @@ export function FundPoolPage() {
       />
 
       <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-        {/* Left: Pool & Wallet Stats */}
+        {/* Left: Pool & Wallet Stats + Faucet Funding Card */}
         <div className="space-y-4">
           <Card>
             <CardHeader className="flex-row items-center gap-2">
@@ -151,6 +152,9 @@ export function FundPoolPage() {
               </div>
             </CardBody>
           </Card>
+
+          {/* Testnet Faucet & Deposit Address Card for Admin Pool Funding */}
+          {address && <FaucetCard account={address} onFunded={refetchAll} />}
         </div>
 
         {/* Right: Deposit / Withdraw Form */}

@@ -11,6 +11,7 @@ import { ComplianceBadge } from "@/components/dashboard/ComplianceBadge";
 import { SegmentedControl } from "@/components/pool/SegmentedControl";
 import { ActionForm } from "@/components/pool/ActionForm";
 import { CapActivation } from "@/components/pool/CapActivation";
+import { FaucetCard } from "@/components/pool/FaucetCard";
 import { SelectCoopPrompt } from "@/components/SelectCoopPrompt";
 import { usePoolPosition } from "@/hooks/usePool";
 import { useTokenDecimals, useTokenSymbol, useTokenBalance } from "@/hooks/useToken";
@@ -86,7 +87,7 @@ export function BorrowPage() {
       />
 
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        {/* Left: loan position + eligibility → cap activation */}
+        {/* Left: loan position + eligibility → cap activation + faucet */}
         <div className="space-y-4">
           <Card>
             <CardHeader className="flex-row items-center gap-2">
@@ -157,6 +158,9 @@ export function BorrowPage() {
               ) : null}
             </>
           )}
+
+          {/* Testnet Faucet & Deposit Address Card */}
+          {address && <FaucetCard account={address} onFunded={refetchAll} />}
         </div>
 
         {/* Right: borrow / repay form */}
