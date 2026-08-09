@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Param, Post } from '@nestjs/common';
 import { PoolService } from './pool.service';
 
 class SetCapDto {
@@ -10,19 +10,15 @@ class SetCapDto {
 export class PoolController {
   constructor(private readonly poolService: PoolService) {}
 
-  @Get('stats')
-  async getStats() {
-    return this.poolService.getStats();
-  }
-
-  @Get('position/:address')
-  async getPosition(@Param('address') address: string) {
-    return this.poolService.getUserPosition(address as `0x${string}`);
-  }
-
-  @Post('set-cap')
-  async setCap(@Body() body: SetCapDto) {
+  /**
+   * POST /api/pool/:coopId/set-cap
+   * Owner-signed: writes a borrower's borrowing cap for the given cooperative.
+   * Body: { address: string, cap: string (base units) }
+   */
+  @Post(':coopId/set-cap')
+  async setCap(@Param('coopId') coopId: string, @Body() body: SetCapDto) {
     const txHash = await this.poolService.setBorrowingCap(
+      BigInt(coopId),
       body.address as `0x${string}`,
       BigInt(body.cap),
     );

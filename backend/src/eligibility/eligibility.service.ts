@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   TransactionsService,
   type CleanverseTx,
 } from '../transactions/transactions.service';
 import { ApassService } from '../apass/apass.service';
 
-const LOOKBACK_MONTHS = 6;
-const LOOKBACK_SECONDS = LOOKBACK_MONTHS * 30 * 24 * 60 * 60;
+const SECONDS_PER_MONTH = 30 * 24 * 60 * 60;
 const AVG_MONTHLY_MULTIPLIER = 0.3;
 const TOTAL_INFLOW_CAP_MULTIPLIER = 0.15;
 
@@ -38,6 +38,10 @@ export interface EligibilityBreakdown {
   inflowTxCount: number;
   averageMonthlyInflow: number;
   lookbackMonths: number;
+  /** Configurable observation window in seconds (brief §6). */
+  observationWindowSeconds: number;
+  /** Minimum qualifying inbound deposits required for eligibility. */
+  minQualifyingDeposits: number;
   /** Numeric A-Pass tier (0 when wallet has no A-Pass or query fails). */
   tier: number;
   /** Multiplier applied to the base borrowingLimit from the tier table. */
@@ -60,11 +64,23 @@ export class EligibilityService {
   constructor(
     private readonly transactions: TransactionsService,
     private readonly apass: ApassService,
+    private readonly config: ConfigService,
   ) {}
 
   async calculate(address: string, chain = 'base'): Promise<EligibilityResult> {
+    const observationWindowSeconds = this.config.get<number>(
+      'eligibility.observationWindowSeconds',
+    ) as number;
+    const minQualifyingDeposits = this.config.get<number>(
+      'eligibility.minQualifyingDeposits',
+    ) as number;
+    // Months are the unit the risk formula normalizes inflow to. For a compressed
+    // demo window this is fractional, which is expected (state the compression in
+    // the write-up); the min() with the total-inflow cap keeps the limit bounded.
+    const windowMonths = observationWindowSeconds / SECONDS_PER_MONTH;
+
     const nowSeconds = Math.floor(Date.now() / 1000);
-    const startTime = nowSeconds - LOOKBACK_SECONDS;
+    const startTime = nowSeconds - observationWindowSeconds;
 
     // Run both Cleanverse calls concurrently -- they are independent.
     // A-Pass failure falls back to tier 0 / 1.0x. Never throws.
@@ -94,7 +110,7 @@ export class EligibilityService {
     const tier = isNaN(tierRaw) ? 0 : tierRaw;
     const tierMultiplier = tierMultiplierFor(tier);
 
-    const inboundTxs = (txs as CleanverseTx[]).filter(
+    const inboundTxs = txs.filter(
       (tx: CleanverseTx) =>
         tx.to_address.toLowerCase() === address.toLowerCase() &&
         tx.status === 'success',
@@ -107,7 +123,7 @@ export class EligibilityService {
     const uniqueSenders = new Set(
       inboundTxs.map((tx) => tx.from_address.toLowerCase()),
     ).size;
-    const averageMonthlyInflow = totalInflow / LOOKBACK_MONTHS;
+    const averageMonthlyInflow = totalInflow / windowMonths;
 
     const baseLimit = Math.min(
       averageMonthlyInflow * AVG_MONTHLY_MULTIPLIER,
@@ -116,15 +132,22 @@ export class EligibilityService {
 
     const borrowingLimit = baseLimit * tierMultiplier;
 
+    // Two separate gates (brief §6): a minimum count of qualifying inbound deposits
+    // (creditworthiness), and a positive computed limit. Identity (complianceVerify)
+    // is enforced separately on-chain, not here.
+    const meetsDepositThreshold = inboundTxs.length >= minQualifyingDeposits;
+
     return {
-      eligible: inboundTxs.length > 0 && borrowingLimit > 0,
+      eligible: meetsDepositThreshold && borrowingLimit > 0,
       borrowingLimit,
       breakdown: {
         totalInflow,
         uniqueSenders,
         inflowTxCount: inboundTxs.length,
         averageMonthlyInflow,
-        lookbackMonths: LOOKBACK_MONTHS,
+        lookbackMonths: windowMonths,
+        observationWindowSeconds,
+        minQualifyingDeposits,
         tier,
         tierMultiplier,
       },
