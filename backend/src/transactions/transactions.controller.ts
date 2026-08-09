@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 
 const DEFAULT_CHAIN = 'base';
@@ -22,5 +22,14 @@ export class TransactionsController {
       page: page ? parseInt(page, 10) : undefined,
       pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
     });
+  }
+
+  /**
+   * POST /api/transactions/travel-rule/:txHash
+   * Downloads a Travel Rule compliance report for the given outbound transaction.
+   */
+  @Post('travel-rule/:txHash')
+  async travelRule(@Param('txHash') txHash: string) {
+    return this.transactionsService.travelRule(txHash);
   }
 }

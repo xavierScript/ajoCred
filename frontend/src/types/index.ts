@@ -12,25 +12,21 @@ export interface ApassData {
   countries: string[];
 }
 
-export interface CleanverseTx {
+export interface RemittanceTx {
   chain: string;
   symbol: string;
-  tx_hash: string;
-  from_address: string;
-  from_org_name: string;
-  to_address: string;
+  hash: string;
+  from: string;
+  to: string;
   amount: string;
-  fee_amount: string;
-  pay_fee_index: number;
-  type: string;
-  block_number: number;
-  block_time: number;
+  blockNumber: number;
+  timestamp: number;
   status: string;
 }
 
 export interface QueryTxsResult {
-  total_count: number;
-  txs: CleanverseTx[];
+  totalCount: number;
+  txs: RemittanceTx[];
 }
 
 export interface EligibilityBreakdown {
@@ -39,6 +35,8 @@ export interface EligibilityBreakdown {
   inflowTxCount: number;
   averageMonthlyInflow: number;
   lookbackMonths: number;
+  apassTier?: string;
+  multiplier?: number;
 }
 
 export interface EligibilityResult {
@@ -78,9 +76,51 @@ export interface DepositAddressResult {
   address: string;
   chain: string;
   txHash: string | null;
-  // On EVM chains USDC and USDT share the same deposit wallet (both fields equal).
   depositUSDCWallet: string;
   depositUSDTWallet: string;
-  // Empty on EVM chains (Solana only).
   aPassAddress: string;
+}
+
+export interface FreezeResult {
+  success: boolean;
+  userAddress: string;
+  status: number;
+  txHash?: string;
+}
+
+export interface TravelRuleResult {
+  success: boolean;
+  txHash: string;
+  reportUrl?: string;
+  data?: any;
+}
+
+export interface RampQuote {
+  quoteToken: string;
+  fiatCurrency: string;
+  cryptoCurrency: string;
+  fiatAmount: number;
+  cryptoAmount: number;
+  totalFee: number;
+  conversionPrice: number;
+}
+
+export interface RampWidget {
+  orderId: string;
+  widgetUrl: string;
+}
+
+export interface RampOrder {
+  orderId: string;
+  status: string;
+  fiatAmount: number;
+  cryptoAmount: number;
+  buyOrSell: string;
+  walletAddress: string;
+}
+
+export interface RampPaymentMethod {
+  id: string;
+  name: string;
+  icon?: string;
 }

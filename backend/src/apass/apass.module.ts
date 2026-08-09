@@ -7,5 +7,6 @@ import { ApassService } from './apass.service';
   imports: [CleanverseModule],
   controllers: [ApassController],
   providers: [ApassService],
+  exports: [ApassService],
 })
 export class ApassModule {}

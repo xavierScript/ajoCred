@@ -9,6 +9,7 @@ import { OnboardPage } from "@/pages/Onboard";
 import { DashboardPage } from "@/pages/Dashboard";
 import { DepositPage } from "@/pages/Deposit";
 import { BorrowPage } from "@/pages/Borrow";
+import { RampPage } from "@/pages/Ramp";
 
 const router = createBrowserRouter([
   {
@@ -40,6 +41,14 @@ const router = createBrowserRouter([
           </RequireWallet>
         ),
         path: "borrow",
+      },
+      {
+        element: (
+          <RequireWallet>
+            <RampPage />
+          </RequireWallet>
+        ),
+        path: "ramp",
       },
     ],
   },

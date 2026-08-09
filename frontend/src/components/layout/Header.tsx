@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, LayoutDashboard, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
+import { Menu, X, LayoutDashboard, ArrowDownToLine, ArrowUpFromLine, CreditCard } from "lucide-react";
 import { useState } from "react";
 import { Wordmark } from "@/components/Logo";
 import { WalletButton } from "@/components/WalletButton";
@@ -10,6 +10,7 @@ const nav = [
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/deposit", label: "Deposit", icon: ArrowDownToLine },
   { path: "/borrow", label: "Borrow", icon: ArrowUpFromLine },
+  { path: "/ramp", label: "Fiat Ramp", icon: CreditCard },
 ];
 
 export function Header() {
@@ -31,7 +32,7 @@ export function Header() {
               to={path}
               className={cn(
                 "flex items-center gap-2 text-sm font-medium transition-colors hover:text-foreground",
-                pathname === path ? "text-foreground" : "text-muted-foreground",
+                pathname === path ? "text-foreground" : "text-muted-foreground"
               )}
             >
               <Icon className="size-4" />
@@ -66,7 +67,7 @@ export function Header() {
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                   pathname === path
                     ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 <Icon className="size-4" />

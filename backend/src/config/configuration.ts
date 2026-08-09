@@ -6,6 +6,9 @@ export default () => ({
     apiKey: process.env.CLEANVERSE_API_KEY,
     baseUrl: process.env.CLEANVERSE_BASE_URL,
   },
+  admin: {
+    apiKey: process.env.ADMIN_API_KEY ?? '',
+  },
   chain: {
     rpcUrl: process.env.BASE_SEPOLIA_RPC_URL,
     poolOwnerPrivateKey: process.env.POOL_OWNER_PRIVATE_KEY,

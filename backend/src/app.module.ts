@@ -8,6 +8,8 @@ import { ValidatorModule } from './validator/validator.module';
 import { FaucetModule } from './faucet/faucet.module';
 import { EligibilityModule } from './eligibility/eligibility.module';
 import { PoolModule } from './pool/pool.module';
+import { AdminModule } from './admin/admin.module';
+import { RampModule } from './ramp/ramp.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { PoolModule } from './pool/pool.module';
     FaucetModule,
     EligibilityModule,
     PoolModule,
+    AdminModule,
+    RampModule,
   ],
 })
 export class AppModule {}

@@ -7,11 +7,14 @@ import type {
   QueryTxsResult,
   VerifyResult,
   FaucetResult,
+  FreezeResult,
+  TravelRuleResult,
+  RampQuote,
+  RampWidget,
+  RampOrder,
+  RampPaymentMethod,
 } from "@/types";
 
-// A wallet with no A-Pass / no history returns a 400 from the backend (Cleanverse
-// "not found"). That's an expected business state, not a transient failure — don't
-// retry it. Retry only network/5xx blips.
 function retryUnlessClientError(failureCount: number, error: unknown) {
   if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
     return false;
@@ -19,7 +22,6 @@ function retryUnlessClientError(failureCount: number, error: unknown) {
   return failureCount < 2;
 }
 
-/** A-Pass status for a wallet. `notFound` distinguishes "no pass yet" from a real error. */
 export function useApass(address?: string) {
   const query = useQuery<ApassData, ApiError>({
     queryKey: ["apass", address],
@@ -33,14 +35,12 @@ export function useApass(address?: string) {
   return { ...query, notFound };
 }
 
-/** Generate an A-Pass (one-time identity verification) for a wallet. */
 export function useGenerateApass() {
   return useMutation({
     mutationFn: (address: string) => api.apass.generate(address),
   });
 }
 
-/** Verified inbound remittance history. */
 export function useTransactions(address?: string) {
   return useQuery<QueryTxsResult, ApiError>({
     queryKey: ["transactions", address],
@@ -51,7 +51,12 @@ export function useTransactions(address?: string) {
   });
 }
 
-/** Off-chain borrowing-limit calculation (risk engine). */
+export function useTravelRule() {
+  return useMutation<TravelRuleResult, ApiError, string>({
+    mutationFn: (txHash: string) => api.transactions.travelRule(txHash),
+  });
+}
+
 export function useEligibility(address?: string) {
   return useQuery<EligibilityResult, ApiError>({
     queryKey: ["eligibility", address],
@@ -62,7 +67,6 @@ export function useEligibility(address?: string) {
   });
 }
 
-/** Off-chain compliance pre-check (UI hint mirroring on-chain complianceVerify). */
 export function useVerify(address?: string) {
   return useQuery<VerifyResult, ApiError>({
     queryKey: ["verify", address],
@@ -73,18 +77,12 @@ export function useVerify(address?: string) {
   });
 }
 
-/** Request sandbox test tokens to a wallet. */
 export function useFaucet() {
   return useMutation<FaucetResult, ApiError, string>({
     mutationFn: (depositAddress: string) => api.faucet.request(depositAddress),
   });
 }
 
-/**
- * Lazily resolve the wallet's Cleanverse deposit address (fetched on demand, not
- * on mount — `enabled: false`, trigger with `refetch()`). Used for the alternate
- * "fund from Circle's faucet" path when the aUSDC faucet reservoir is empty.
- */
 export function useDepositAddress(address?: string) {
   return useQuery<DepositAddressResult, ApiError>({
     queryKey: ["deposit-address", address],
@@ -95,14 +93,53 @@ export function useDepositAddress(address?: string) {
   });
 }
 
-/**
- * Owner-signed on-chain borrowing-cap write (backend holds the pool owner key).
- * `cap` is a stringified token base-unit bigint, matching the contract's uint256.
- * The borrow flow calls this after eligibility so the on-chain cap reflects the
- * off-chain risk calculation before the user draws funds.
- */
 export function useSetCap() {
   return useMutation<{ txHash: string }, ApiError, { address: string; cap: string }>({
     mutationFn: ({ address, cap }) => api.pool.setCap(address, cap),
+  });
+}
+
+export function useFreeze() {
+  return useMutation<FreezeResult, ApiError, { address: string; reason?: string }>({
+    mutationFn: ({ address, reason }) => api.admin.freeze(address, reason),
+  });
+}
+
+export function useUnfreeze() {
+  return useMutation<FreezeResult, ApiError, string>({
+    mutationFn: (address: string) => api.admin.unfreeze(address),
+  });
+}
+
+export function useRampQuote() {
+  return useMutation<RampQuote, ApiError, any>({
+    mutationFn: (params: any) => api.ramp.quote(params),
+  });
+}
+
+export function useRampWidget() {
+  return useMutation<RampWidget, ApiError, { quoteToken: string; wallet: any }>({
+    mutationFn: ({ quoteToken, wallet }) => api.ramp.widget(quoteToken, wallet),
+  });
+}
+
+export function useRampOrder(orderId?: string) {
+  return useQuery<RampOrder, ApiError>({
+    queryKey: ["ramp-order", orderId],
+    queryFn: () => api.ramp.order(orderId!),
+    enabled: !!orderId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (status === "COMPLETED") return false;
+      return 5_000;
+    },
+  });
+}
+
+export function useRampPaymentMethods(fiatCurrency = "USD") {
+  return useQuery<RampPaymentMethod[], ApiError>({
+    queryKey: ["ramp-payment-methods", fiatCurrency],
+    queryFn: () => api.ramp.paymentMethods(fiatCurrency),
+    staleTime: 300_000,
   });
 }

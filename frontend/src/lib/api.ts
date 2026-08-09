@@ -7,9 +7,16 @@ import type {
   QueryTxsResult,
   UserPoolPosition,
   VerifyResult,
+  FreezeResult,
+  TravelRuleResult,
+  RampQuote,
+  RampWidget,
+  RampOrder,
+  RampPaymentMethod,
 } from "@/types";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY ?? "";
 
 /** Error carrying the backend's HTTP status and parsed message. */
 export class ApiError extends Error {
@@ -33,8 +40,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!res.ok) {
-    // NestJS errors come back as { statusCode, message, error }; message may be
-    // a string or string[]. Fall back to raw text for anything non-JSON.
     let message = res.statusText;
     try {
       const body = await res.json();
@@ -62,6 +67,8 @@ export const api = {
   transactions: {
     query: (address: string, chain = "base") =>
       request<QueryTxsResult>(`/api/transactions/${address}?chain=${chain}`),
+    travelRule: (txHash: string) =>
+      request<TravelRuleResult>(`/api/transactions/travel-rule/${txHash}`),
   },
   eligibility: {
     get: (address: string, chain = "base") =>
@@ -94,5 +101,35 @@ export const api = {
       request<DepositAddressResult>(
         `/api/faucet/deposit-address/${address}?chain=${chain}`,
       ),
+  },
+  admin: {
+    freeze: (userAddress: string, reason?: string) =>
+      request<FreezeResult>("/api/admin/freeze", {
+        method: "POST",
+        headers: { "x-admin-key": ADMIN_KEY },
+        body: JSON.stringify({ userAddress, reason }),
+      }),
+    unfreeze: (userAddress: string) =>
+      request<FreezeResult>("/api/admin/unfreeze", {
+        method: "POST",
+        headers: { "x-admin-key": ADMIN_KEY },
+        body: JSON.stringify({ userAddress }),
+      }),
+  },
+  ramp: {
+    quote: (params: any) =>
+      request<RampQuote>("/api/ramp/quote", {
+        method: "POST",
+        body: JSON.stringify(params),
+      }),
+    widget: (quoteToken: string, wallet: any) =>
+      request<RampWidget>("/api/ramp/widget", {
+        method: "POST",
+        body: JSON.stringify({ quoteToken, wallet }),
+      }),
+    order: (orderId: string) =>
+      request<RampOrder>(`/api/ramp/order/${orderId}`),
+    paymentMethods: (fiatCurrency = "USD") =>
+      request<RampPaymentMethod[]>(`/api/ramp/payment-methods?fiatCurrency=${fiatCurrency}`),
   },
 };

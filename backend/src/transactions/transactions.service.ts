@@ -50,4 +50,12 @@ export class TransactionsService {
       txs: result.txs ?? [],
     };
   }
+
+  /**
+   * Download a Travel Rule compliance report PDF for a given transaction hash.
+   * Wraps Cleanverse `/download_travel_rule`.
+   */
+  async travelRule(txHash: string): Promise<unknown> {
+    return this.cleanverse.postPlain('/download_travel_rule', { txHash });
+  }
 }

@@ -4,18 +4,24 @@ import { Button } from "./Button";
 
 /** Consistent inline error with an optional retry — used across data panels. */
 export function ErrorState({
+  title,
   message,
   onRetry,
+  retry,
 }: {
+  title?: string;
   message: string;
   onRetry?: () => void;
+  retry?: () => void;
 }) {
+  const handleRetry = onRetry ?? retry;
   return (
     <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
       <AlertTriangle className="size-6 text-destructive" aria-hidden />
+      {title && <p className="font-medium text-destructive">{title}</p>}
       <p className="max-w-sm text-sm text-muted-foreground">{message}</p>
-      {onRetry && (
-        <Button variant="outline" size="sm" onClick={onRetry}>
+      {handleRetry && (
+        <Button variant="outline" size="sm" onClick={handleRetry}>
           Try again
         </Button>
       )}

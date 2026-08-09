@@ -1,8 +1,7 @@
 # AjoCred — Project Brief for Antigravity
 
 ## What this document is
-
-Full context for building AjoCred: a DeFi lending product for the Cleanverse Build: Trusted Assets Hackathon. Read this fully before writing any code. Ask clarifying questions on anything ambiguous rather than assuming.
+Full context for building AjoCred: a DeFi lending product for the Cleanverse Build: Trusted Assets Hackathon. Read this fully before writing any code. Ask clarifying questions on anything ambiguous rather than assuming. This supersedes any earlier version of this brief — the architecture has evolved significantly (cooperative multi-tenancy, OnchainKit onboarding, multisig) since the original single-pool MVP.
 
 ---
 
@@ -11,291 +10,212 @@ Full context for building AjoCred: a DeFi lending product for the Cleanverse Bui
 **Event:** Cleanverse Build: Trusted Assets Hackathon, supported by Monad Foundation.
 **Track:** DeFi (Track 02) — NOT RWA.
 **Key dates (UTC):**
-
-- Registration: Jul 21 – Aug 7 (already done — registered as "Team AjoCred")
+- Registration: Jul 21 – Aug 7 (done — registered as "Team AjoCred")
 - **Hacking period: Aug 8 00:00 – Aug 9 23:59** (48 hours)
 - Submission deadline: Aug 9 23:59 UTC, via email to isaac@cleanverse.com
 - Winners announced: Aug 14
-  **Prize:** $16K total pool (aUSDC), top 3 per track: 5,000 / 2,000 / 1,000 aUSDC.
-
-**Team:** Solo builder (David). No teammates.
-
-**Goal: win 1st place**, not just place. This shapes every prioritization decision below.
+**Prize:** $16K total pool (aUSDC), top 3 per track: 5,000 / 2,000 / 1,000 aUSDC.
+**Team:** Solo builder (David). Building an MVP now (pre-Aug 8) and rebuilding/hardening during the actual hacking window — see §9 Commit Strategy.
 
 ### Judging Criteria (out of 100)
+| Criterion | Points |
+|---|---|
+| Concept & Problem Definition | 20 |
+| **Depth of CVI·CVA Integration** | **30 — highest weight, do not under-invest here** |
+| Build Quality | 25 |
+| UX & Demo | 15 |
+| Scalability Potential | 10 |
 
-| Criterion                        | Points | What it rewards                               |
-| -------------------------------- | ------ | --------------------------------------------- |
-| Concept & Problem Definition     | 20     | Clear, real, well-articulated problem         |
-| **Depth of CVI·CVA Integration** | **30** | **Highest weight — do NOT under-invest here** |
-| Build Quality                    | 25     | Working, deployed, live — not narrated/mocked |
-| UX & Demo                        | 15     | Clear story/persona, not just feature tour    |
-| Scalability Potential            | 10     | Expansion path, pilot plausibility            |
+**Additional Considerations:** use Cleanverse primitives meaningfully; solve real financial infrastructure problems; pilotable with institutions or merchants; improve trust/compliance/interoperability; demonstrate clear user value; technically feasible beyond the hackathon.
 
-**Additional Considerations (qualitative, not separately scored but referenced):** use Cleanverse primitives meaningfully; solve real financial infrastructure problems; pilotable with institutions/merchants; improve trust/compliance/interoperability; demonstrate clear user value; technically feasible beyond the hackathon.
-
-### Key strategic takeaways
-
-- **30/100 points are integration depth** — bigger than build quality. Most competing teams will under-invest here by treating CVI/CVA as a checkbox. This is the biggest lever for differentiation.
-- DeFi track technically only requires CVI **or** CVA — we are deliberately doing **both, deeply**, since we have runway. This is a differentiator, not a requirement.
-- A smaller, fully-working slice beats a bigger, partially-broken one.
-- **Commit history during Aug 8–9 UTC is a stated submission requirement.** We are building/learning now (Aug 4 onward) as prep, but genuine, substantial commits must land during the actual hacking window — see "Commit Strategy" below. Do not front-load all real work into a single pre-window or instant-dump commit; that reads as fabricated either way.
+### Strategic decisions carried through the whole build
+- DeFi track only requires CVI **or** CVA — doing **both, deeply**, deliberately, as a differentiator.
+- Chain: **Base**, but it should be built in such a way that it can easily deployed on any evm chain.
+- A smaller, fully-working slice beats a bigger, partially-broken one. Every scope addition below has been evaluated against this — several attractive ideas were deliberately cut (see §8).
 
 ---
 
-## 2. The Product — AjoCred
+## 2. The Product — AjoCred (current architecture: two-sided cooperative marketplace)
 
-**One-liner:** AjoCred turns diaspora remittance history into instant, collateral-free credit for recipients in Nigeria, using Cleanverse's verified identity (CVI) and verified assets (CVA) as the trust layer.
+**One-liner:** AjoCred is compliant, under-collateralized lending infrastructure for Nigerian cooperatives and agencies serving remittance-linked populations — letting an institution launch a credit product against verified diaspora income in days, while individuals like Amaka get access to credit the formal system currently denies them.
 
-**The problem:** Nigerians receiving regular diaspora remittances have real, provable income that is invisible to the formal financial system — no collateral, no recognized credit history, so they're locked out of bank credit and pushed toward predatory loan apps.
+**Two distinct beneficiaries, addressed by one product:**
+1. **End users (Amaka persona):** receives diaspora remittances, verifies identity once (CVI), and her verified inflow history becomes the basis for collateral-free borrowing.
+2. **Institutions (cooperatives/agencies):** register with AjoCred, fund and configure their own pool (own liquidity cap, own risk tier threshold), and earn interest on repayments. Multiple cooperatives coexist on the platform; borrowers choose which one to borrow from.
 
-**The mechanism:**
-
-1. Diaspora relative sends stablecoin (CVA-wrapped `ausdc`) to a recipient's wallet in Nigeria.
-2. Recipient completes one-time CVI verification (A-Pass) tied to their wallet.
-3. Their on-chain inflow history (via `query_txs`) becomes a transparent, verifiable "credit file" — no bank paperwork.
-4. A smart contract lending pool (funded by depositors/LPs, not just admin-seeded) gates borrowing eligibility via Cleanverse's on-chain Validator (`validator/verify`), checking the wallet's A-Pass attributes against pool rules.
-5. Eligible wallets borrow against their verified inflow pattern — no collateral required, but borrowing caps are deliberately conservative (a fraction of verified average monthly inflow), not aggressive multiples.
+**Why Cleanverse is essential (not optional):** without CVI, there's no way to distinguish a real verified remittance recipient from an anonymous wallet gaming the system. Without the on-chain Validator, compliance would be an app-layer promise instead of an enforced, atomic, on-chain property of the contract. Without CVA (`ausdc`), the capital moving through the system wouldn't be verified/compliant stablecoin value. An institution onboarding onto AjoCred inherits all of this instead of building KYC/compliance infrastructure from scratch.
 
 **Demo persona:** Amaka, in Lagos, receiving remittances from a relative in Toronto.
 
-**Two-sided pool — important, not to be dropped:** The pool must have a real `deposit()` function so liquidity providers can genuinely fund it (even if, in the demo, that LP is a second wallet/account controlled by David). This must not be reduced to "admin tops up the pool via faucet" — that undersells the actual DeFi mechanic and weakens the answer to "who funds this, and is it risky." Under-collateralized lending risk is real and openly acknowledged in the roadmap (conservative caps, gradual limit increases, future reserve fund) — not solved in the hackathon, but not hand-waved either.
-
-**Why CVI is essential:** Without identity verification, the protocol has no way to distinguish a real remittance recipient from an anonymous wallet gaming the system with fake self-transfers. CVI is the trust root the entire lending decision depends on.
-
-**Why CVA is essential — precise framing (revised, corrects an earlier looser framing):**
-
-- CVA (`ausdc`, an A-Token) _can_ enforce compliance rules automatically at the token level (its `_update` function checks `complianceVerify` on both sender and receiver on every transfer) — but **only when the token's Pool+Fee addresses have been registered via `registerApass`, which can only be called by a Factory contract holding `REGISTER_ROLE`.**
-- AjoCred is **Single-Contract Mode** (see §3.5) — no Factory — so we do **not** get this automatic token-level enforcement "for free." Do not claim a second independent CVA-level compliance checkpoint in the submission write-up; that would overclaim what Single-Contract Mode actually provides.
-- What AjoCred _does_ get, correctly stated: **one on-chain compliance checkpoint enforced directly inside our own contract** — `AjoCredPool` calls `validator.complianceVerify(address(this), msg.sender)` inline in `deposit()`, `borrow()`, and `withdraw()`. This is still a strong, legitimate integration (real on-chain enforcement, not an off-chain app-layer check) — just be precise that it's one checkpoint we built, not two independent layers.
-- Do not describe CVA as providing an on-chain "audit trail" or "traceable origin" metadata baked into the token itself — the docs don't support that framing. Audit trail / reporting comes from `download_travel_rule` and `query_txs`, which are separate REST endpoints.
-
-**Chain decision: Base, not Monad.** Rationale: zero prior EVM experience + solo + 48-hour build window means standard, extremely well-documented EVM tooling (Hardhat, viem, OpenZeppelin) beats a newer, less battle-tested chain, even though Monad is the hackathon's headline sponsor. Judging criteria do not weight chain choice — they weight integration depth and build quality, which a working product on Base delivers better than a struggling one on Monad. Confirm Cleanverse's CVI/CVA API/SDK examples aren't Monad-specific before committing further (Base is listed as a supported chain in the docs, so this should be a non-issue, but verify).
-
 ---
 
-## 3. Tech Stack (decided, with rationale)
+## 3. Architecture — Cooperative Multi-Tenancy (Single-Contract Mode, no Factory)
 
-| Layer                       | Choice                                                 | Why                                                                                                                                                                                                                                                                                                                                                                                                           |
-| --------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Smart contracts             | Solidity                                               | Only option for EVM/Base                                                                                                                                                                                                                                                                                                                                                                                      |
-| Contract framework          | Hardhat (TypeScript)                                   | Reuses existing TS/Node skill; avoids learning Foundry's Rust-flavored tooling on top of EVM at the same time                                                                                                                                                                                                                                                                                                 |
-| Backend                     | **NestJS** (Node.js + TypeScript)                      | Chosen over Fastify (David's more familiar stack) specifically because the "close to full production" ambition benefits from NestJS's modular structure and DI — Cleanverse's own API is split into clean modules (A-Pass, Validator, Common Queries) that map naturally onto NestJS feature modules. Trade-off acknowledged: real learning curve on top of the EVM learning curve — budget time accordingly. |
-| Frontend                    | Vite + React + TypeScript                              | Faster dev loop than Next.js; no SSR/SEO need for a hackathon demo                                                                                                                                                                                                                                                                                                                                            |
-| Wallet/chain interaction    | wagmi + viem                                           | Current standard, better docs/errors than ethers v5 — important given zero prior EVM experience                                                                                                                                                                                                                                                                                                               |
-| Wallet connect UI           | RainbowKit or ConnectKit                               | Off-the-shelf, no payoff in building this by hand                                                                                                                                                                                                                                                                                                                                                             |
-| Encryption                  | Node's built-in `crypto` (AES-256-CBC)                 | Matches Cleanverse's exact spec (AES/CBC/PKCS5, fixed zero IV) — no extra dependency needed                                                                                                                                                                                                                                                                                                                   |
-| Database (production phase) | PostgreSQL + Prisma                                    | Only needed once persistent user/loan records matter beyond what's on-chain                                                                                                                                                                                                                                                                                                                                   |
-| MCP tooling                 | Base Layer 2 MCP server (already added to Antigravity) | Gives the agent live read/write access to Base — separate concern from Cleanverse API knowledge, which is domain knowledge, not a tool                                                                                                                                                                                                                                                                        |
+**Key design decision:** cooperative multi-tenancy is built as **internal accounting inside one Cleanverse-registered contract** — NOT via Cleanverse's Factory Mode. This was a deliberate choice: Factory Mode requires `validator/grant`, an external Cleanverse approval with unknown turnaround time, which is an unacceptable dependency risk this close to submission. One `AjoCredPool` contract registers once with Cleanverse (Single-Contract Mode, as established earlier), and internally partitions cooperatives via mappings — Cleanverse never needs to know about the multi-tenancy; it's entirely AjoCred's own application logic.
 
-### 3.5 On-Chain Validator Integration (CCP) — supersedes REST-only plan
-
-Discovered a second Cleanverse doc — the **CCP (Cleanverse Compliance Protocol) Integration Guide** — describing the actual on-chain `IAPassComplianceValidator` Solidity interface. This is a deeper integration path than the REST `POST /validator/verify` call described in the main API spec, and changes how compliance gating is implemented:
-
-- **Two integration patterns exist: Factory Mode (multi-pool) and Single-Contract Mode (one pool, no factory).** AjoCred is **Single-Contract Mode** — solo builder, one pool, no need to spin up multiple pools dynamically. This also confirms `validator/grant` (Factory `REGISTER_ROLE`) stays correctly out of scope.
-- **The pool contract calls `complianceVerify(poolAddress, userAddress)` directly, on-chain, inline** inside `deposit()`, `borrow()`, and `withdraw()` — reverting the transaction if the caller doesn't qualify. This replaces the earlier plan of the backend calling REST `validator/verify` and relaying a yes/no to the contract. On-chain inline enforcement is the stronger, more legitimate integration and should be the headline technical detail in the demo and submission write-up.
-- **Registration flow:** deploy `AjoCredPool` → `POST /api/cooperate/validator/register` with `owner_signature` (EIP-191 personal_sign over `keccak256(chain + contract_address)`, lowercase hex, no separator) → then call `setRuleV2FromContract(rule)` as contract owner to set the compliance rule on-chain.
-- **On-chain `RuleV2` struct is NOT the same shape as the REST API's rule object** — do not mix these up:
-  - REST (off-chain, A-Token rules): `{allowed_group: string, allowed_sub_group: string, min_tier: int, min_sub_tier: int, is_black_list: bool, countries: string[]}`
-  - On-chain (`RuleV2`, used by the Validator contract): `{allowedGroup: bytes2, allowedSubGroup: bytes2, minTier: uint8, minSubTier: uint8, poolCountryBitmap: uint256}` — countries are a **bitmap**, not an array.
-  - Fields within one `RuleV2` are AND'd; multiple `RuleV2`s on the same pool are OR'd (alternate qualifying paths, not additional constraints).
-- **Reference contract template** (`CompliantLending` from the CCP guide) is almost a direct match for `AjoCredPool` — `deposit()` / `borrow()` / `withdraw()`, each gated by `complianceVerify`. Use it as the base shape:
-
+### Contract shape
 ```solidity
-import {IAPassComplianceValidator} from "./IAPassComplianceValidator.sol";
-
-contract AjoCredPool is Ownable {
-    IAPassComplianceValidator public immutable validator;
-    mapping(address => uint256) public deposits;
-    mapping(address => uint256) public borrowings;
-
-    constructor(address validator_) {
-        validator = IAPassComplianceValidator(validator_);
-    }
-
-    function deposit(uint256 amount) external {
-        require(validator.complianceVerify(address(this), msg.sender), "A-Pass not qualified");
-        deposits[msg.sender] += amount;
-        // transferFrom + accounting logic
-    }
-
-    function borrow(uint256 amount) external {
-        require(validator.complianceVerify(address(this), msg.sender), "A-Pass not qualified");
-        // risk-engine-derived cap check here
-        borrowings[msg.sender] += amount;
-    }
+struct Cooperative {
+    address admin;
+    uint256 totalLiquidity;
+    uint256 maxLiquidity;   // capped-pilot-mode, per cooperative
+    uint8 minTier;          // cooperative-specific risk threshold, app-enforced on top of base CVI check
+    bool active;
 }
+
+mapping(uint256 => Cooperative) public cooperatives;
+uint256 public cooperativeCount;
+mapping(uint256 => mapping(address => uint256)) public deposits;   // coopId => LP => amount
+mapping(uint256 => mapping(address => uint256)) public borrowings; // coopId => borrower => amount
+
+// Platform owner (the multisig, see §4) approves new cooperatives — not open self-registration
+function registerCooperative(address admin, uint256 maxLiquidity, uint8 minTier) external onlyOwner returns (uint256) {
+    cooperativeCount++;
+    cooperatives[cooperativeCount] = Cooperative(admin, 0, maxLiquidity, minTier, true);
+    return cooperativeCount;
+}
+
+function deposit(uint256 coopId, uint256 amount) external {
+    Cooperative storage coop = cooperatives[coopId];
+    require(coop.active, "inactive cooperative");
+    require(msg.sender == coop.admin, "only cooperative admin funds this pool"); // see funding-source decision below
+    require(validator.complianceVerify(address(this), msg.sender), "A-Pass not qualified");
+    require(coop.totalLiquidity + amount <= coop.maxLiquidity, "cap reached");
+    aUSDC.transferFrom(msg.sender, address(this), amount);
+    deposits[coopId][msg.sender] += amount;
+    coop.totalLiquidity += amount;
+}
+
+function borrow(uint256 coopId, uint256 amount) external {
+    Cooperative storage coop = cooperatives[coopId];
+    require(coop.active, "inactive cooperative");
+    require(validator.complianceVerify(address(this), msg.sender), "A-Pass not qualified");
+    require(coop.totalLiquidity >= amount, "insufficient liquidity");
+    borrowings[coopId][msg.sender] += amount;
+    coop.totalLiquidity -= amount;
+    aUSDC.transfer(msg.sender, amount);
+}
+// repay() applies a flat interest fee (e.g. 5% of principal) — NOT time-accruing interest.
+// Time-based accrual was deliberately rejected: more bug surface for little narrative payoff at this stage.
 ```
 
-- The REST `validator/verify` endpoint isn't wasted — keep using it in the **frontend/backend for off-chain UI purposes** (e.g. showing "you're eligible to borrow" before the user even submits a transaction), but the actual enforcement judges should see is the on-chain `complianceVerify` call reverting/succeeding a real transaction.
+**Funding-source decision:** `deposit()` is restricted to the cooperative admin only — NOT open to arbitrary public liquidity providers. Reasoning: an open-LP model requires share-based (ERC-4626-style) proportional accounting for interest distribution — real added scope for a feature that isn't needed to prove the core thesis. Public LP deposits are named explicitly as a roadmap item (§8), not built.
+
+**On-chain Validator integration recap (established earlier, still current):**
+- Single-Contract Mode confirmed correct (no Factory needed even with multi-tenancy — see above).
+- `RuleV2` (on-chain) uses `bytes2 allowedGroup/allowedSubGroup`, `uint8 minTier/minSubTier`, `uint256 poolCountryBitmap` — NOT the same shape as REST rule objects (string/array based). Do not conflate.
+- `complianceVerify(poolAddress, userAddress)` is called inline in `deposit()`/`borrow()`/`withdraw()` — this on-chain, atomic enforcement is the headline integration point, stronger than relying on the REST `validator/verify` endpoint (which is kept only for off-chain UI hints, e.g. "you're eligible" before submitting a tx).
+- CVA framing: because this is Single-Contract Mode, do NOT claim two independent CVA-level compliance checkpoints (that requires Factory-mode `registerApass`, which we don't use) — the honest claim is one on-chain checkpoint enforced directly inside AjoCred's own contract.
 
 ---
 
-## 4. Repo Structure (NestJS backend version)
+## 4. Institutional Trust — Multisig + Capped Pilot Mode
 
-```
-ajocred/
-├── contracts/                          # Hardhat project
-│   ├── contracts/
-│   │   ├── AjoCredPool.sol             # deposit(), verify-gated borrow(), repay() — calls complianceVerify() inline
-│   │   └── interfaces/
-│   │       └── IAPassComplianceValidator.sol  # Cleanverse's on-chain Validator interface (RuleV2, complianceVerify, setRuleV2FromContract etc.)
-│   ├── scripts/
-│   │   ├── deploy.ts
-│   │   └── registerAndSetRule.ts       # Calls POST /validator/register, then setRuleV2FromContract on-chain
-│   ├── test/AjoCredPool.test.ts
-│   └── hardhat.config.ts
-│
-├── backend/                             # NestJS
-│   ├── src/
-│   │   ├── apass/                      # generate_apass, query_apass, verify_apass
-│   │   ├── transactions/               # query_txs → feeds risk calc
-│   │   ├── loans/                      # loan request/repay, risk-engine.service.ts
-│   │   ├── pool/                       # reads/writes AjoCredPool.sol via viem
-│   │   ├── validator/                  # register (REST, one-time setup) + verify (REST, off-chain UI hint only — real enforcement is on-chain, see §3.5)
-│   │   ├── ramp/                       # [production only, post-hackathon]
-│   │   ├── webhooks/                   # [production only, if we ever issue our own A-Token]
-│   │   ├── common/
-│   │   │   ├── cleanverse/             # cleanverse-client.service.ts, encryption.service.ts
-│   │   │   └── contracts/              # contract-client.service.ts (viem setup)
-│   │   ├── config/configuration.ts
-│   │   ├── app.module.ts
-│   │   └── main.ts
-│   └── test/
-│
-├── frontend/                            # Vite + React
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── Onboard.tsx             # wallet connect + A-Pass verification
-│   │   │   ├── Dashboard.tsx           # tx history, eligibility, borrowing limit
-│   │   │   ├── Deposit.tsx             # LP deposit flow — shows pool TVL
-│   │   │   └── Borrow.tsx              # loan request + live validator/verify result
-│   │   ├── components/
-│   │   │   ├── WalletConnect.tsx
-│   │   │   ├── TxHistoryTable.tsx
-│   │   │   └── ComplianceStatusBadge.tsx
-│   │   ├── hooks/useAjoCredPool.ts
-│   │   └── lib/{wagmiConfig.ts, abi/}
-│
-├── shared/types.ts
-├── docs/
-│   ├── demo-script.md                  # Amaka persona walkthrough
-│   ├── submission-summary.md           # required one-pager for submission
-│   └── cleanverse-api-reference.md     # trimmed, hackathon-scoped endpoint reference (see below)
-├── .env.example
-└── README.md
-```
+Added specifically to make "institutions can actually use this" credible without the risk of building Cleanverse's Factory Mode.
 
-**Endpoints in scope for the hackathon build** (do not build beyond these unless explicitly asked):
-
-- `generate_apass`, `query_apass` (A-Pass)
-- `query_txs` (transaction history)
-- `validator/register`, `validator/set_rule`, `validator/verify` (Validator Compliance)
-- `query_deposit_atoken_list`, `query_deposit_address` (existing `ausdc` A-Token, not issuing our own)
-- `faucet` (sandbox test funds only)
-
-**Explicitly out of scope for the hackathon** (production roadmap only — do not build unless asked):
-
-- `atoken/launch` and all issuance/registration/wrapped-token endpoints (too much async approval overhead for 48 hours)
-- Institutional deposit whitelist endpoints
-- Fiat Ramp (all `/query_ramp_*`, `create_ramp_widget_url`, `query_ramp_order`)
-- `download_travel_rule`
-- `update_status`, `query_apass_list` (back-office tools, not the live borrower flow)
-- `validator/grant` (only needed for multi-pool architecture)
+- **Multisig ownership:** contract `owner()` is a Safe (Gnosis Safe / "Safe") multisig, not a single EOA — transferred via `transferOwnership()` (built into OpenZeppelin `Ownable`) right after deploy. This governs `registerCooperative()` and any owner-only config changes, so no single person unilaterally controls cooperative onboarding or platform parameters.
+- **Capped pilot mode:** each cooperative has a `maxLiquidity` ceiling enforced on-chain in `deposit()`. This is the concrete, inspectable mechanism behind the "bounded pilot, not production-scale" claim in the write-up — demo should show a deposit succeeding under the cap and reverting once it would exceed it.
+- **Submission write-up language (draft):** *"AjoCred's initial pilot target is a Nigeria-focused diaspora remittance fintech or cooperative already serving a verified user base but lacking compliant on-chain credit infrastructure. Each cooperative's pool launches capped in total liquidity (enforced on-chain), governed by a multisig, with the cap raised incrementally as repayment data validates the model."*
 
 ---
 
-## 5. Commit Strategy — important, follow carefully
+## 5. Seamless Onboarding — OnchainKit / Coinbase Smart Wallet
 
-- Build and learn now (Aug 4 onward) — this is legitimate prep, not against the rules.
-- **Use git normally starting now.** Do not withhold commits or avoid version control while prepping — that's both bad practice and produces a suspicious-looking single-dump commit history later.
-- Keep the repo private (or unpushed) until ready.
-- Push to public GitHub once, preserving full commit history, at or after Aug 8. GitHub preserves real author/commit dates regardless of push time — this gives judges an honest, visible multi-day arc (prep before the window, real integration work during it), which reads as credible.
-- **Deliberately hold back genuine, substantial integration milestones for Aug 8–9 itself** — not cosmetic polish, but real work: end-to-end wiring, testnet deployment, `validator/verify` actually gating a live transaction, real debugging. This needs to visibly happen inside the window.
+**Decision: using OnchainKit** (not Privy) since the build targets Base — OnchainKit is Base-native and plugs directly into the existing wagmi setup.
+
+**What it solves:**
+- **Wallet creation** — passkey-based (Face ID/Touch ID) Smart Wallet creation via `<ConnectWallet>`. No seed phrase, no extension install, for both Amaka and cooperative admins.
+- **Gas sponsorship** — via Coinbase Paymaster, sponsored **only on Base** (confirmed — this does not extend to Monad or other chains, which is one reason multi-chain deployment is a stretch goal at most, not a commitment — see §8).
+- Confirmed via Coinbase's own docs: Smart Wallet supports 8 networks (Base, Ethereum, Optimism, Arbitrum, Polygon, Avalanche, BNB, Zora) — Monad is not among them. If any Monad work happens, it needs a separate, chain-agnostic onboarding path (Privy was the identified fallback) — not built unless Monad deployment actually happens.
+
+**UI language rule:** never show "wallet," "gas," "A-Pass," or "on-chain" in Amaka's or the admin's flow. Use "your AjoCred account," "verify your identity," "borrowing limit," etc. This is a cheap, high-visibility win for the UX & Demo score.
+
+### Two distinct addresses per user — do not conflate in UI
+- **Smart Wallet address** — used to call `deposit()`/`borrow()`/`repay()`, holds aUSDC balance.
+- **Cleanverse deposit address** (from `query_deposit_address`) — the address a diaspora relative should actually send USDC to for conversion. Amaka's "Receive Money" screen should show THIS address (with QR code), not her raw Smart Wallet address — framed as "share this with your family abroad."
+
+### Admin flow (cooperative)
+Registration (off-chain form + platform approval) → passkey login via `<ConnectWallet>` → dashboard shows pool liquidity/cap/borrowers → fund pool (`deposit()`, gas-sponsored) → adjust `minTier`/cap (gas-sponsored, one-click).
+
+### Amaka flow
+Sign up via passkey → identity verification (`generate_apass`, gas-sponsored) → dashboard shows remittance history via `query_txs` as a plain-language timeline, not a raw tx log → browse cooperatives, pick one → borrow (gas-sponsored, `complianceVerify` gated) → repay (flat interest fee, gas-sponsored).
 
 ---
 
-## 6. Team Background (for submission form context)
+## 6. Demo-Specific Eligibility Window — do not hardcode "6 months"
 
-Solo builder — software engineer with hands-on experience across Rust, Solana (Anchor, Pinocchio), Node.js, TypeScript, and Fastify. Currently building a separate USDC-based payments app for Nigerian users (KOLO), giving direct, practical experience with stablecoin rails, wallet infrastructure, and payment confirmation in the Nigerian market this project targets.
-
----
-
-## 7. Credentials Handling — follow exactly, do not deviate
-
-We have received a **Sandbox API Id** and **Sandbox API Key** from Cleanverse's welcome email. These are not interchangeable and are used differently:
-
-- **`api-id`** — sent as a plain HTTP header (`api-id: ...`) on every Cleanverse request. Identifies our institution. Not sent as a secret, but still never hardcoded or committed.
-- **`api-key`** — **never sent over the network, ever.** Per the docs, it's used _locally_ only, as the AES encryption/decryption key for endpoints that require encrypted bodies. Treat this as a real secret.
-
-### Storage
-
-- Both values live only in `backend/.env` (local, gitignored) — never in code, never in this brief, never in any file committed to the repo.
-- `.env` must be added to `.gitignore` **before the first commit**, not after.
-- `backend/.env.example` holds only placeholder keys (`CLEANVERSE_API_ID=`, `CLEANVERSE_API_KEY=`) with no real values, so the shape is visible without exposing secrets.
-- Load via `@nestjs/config` in `config/configuration.ts`, exposing `cleanverse.apiId`, `cleanverse.apiKey`, `cleanverse.baseUrl`.
-
-### Encryption implementation (`common/cleanverse/encryption.service.ts`)
-
-Implements the exact spec from the docs: AES/CBC/PKCS5Padding, fixed IV of 16 zero bytes, key = Base64-decoded `api-key`. Node's built-in `crypto` module, no external dependency needed.
+The risk-engine's inflow-history requirement must be **parameterized**, not hardcoded, so the same logic serves both production and demo:
 
 ```typescript
-import { Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import * as crypto from "crypto";
-
-@Injectable()
-export class EncryptionService {
-  private readonly key: Buffer;
-  private readonly iv = Buffer.alloc(16, 0); // fixed 16 zero bytes
-
-  constructor(private config: ConfigService) {
-    const apiKey = this.config.get<string>("cleanverse.apiKey");
-    this.key = Buffer.from(apiKey, "base64"); // decode api-key first
-  }
-
-  encrypt(plainObj: unknown): string {
-    const json = JSON.stringify(plainObj);
-    const cipher = crypto.createCipheriv("aes-256-cbc", this.key, this.iv);
-    const encrypted = Buffer.concat([
-      cipher.update(json, "utf8"),
-      cipher.final(),
-    ]);
-    return encrypted.toString("base64");
-  }
-
-  decrypt(base64Ciphertext: string): unknown {
-    const decipher = crypto.createDecipheriv("aes-256-cbc", this.key, this.iv);
-    const decrypted = Buffer.concat([
-      decipher.update(Buffer.from(base64Ciphertext, "base64")),
-      decipher.final(),
-    ]);
-    return JSON.parse(decrypted.toString("utf8"));
-  }
-}
+const OBSERVATION_WINDOW_SECONDS = Number(process.env.OBSERVATION_WINDOW_SECONDS); // production default: ~15,552,000 (6 months)
+const MIN_QUALIFYING_DEPOSITS = Number(process.env.MIN_QUALIFYING_DEPOSITS); // production default: e.g. 3
 ```
+For the demo: compress to e.g. `OBSERVATION_WINDOW_SECONDS=3600` and `MIN_QUALIFYING_DEPOSITS=2`. State this compression explicitly in the submission write-up — framed honestly as compressed timescale, same logic, not a fabricated bypass.
 
-**Verify once real credentials are in hand:** `aes-256-cbc` requires a 32-byte key after Base64 decoding. If the decoded `api-key` is 16 bytes instead, switch to `aes-128-cbc`. The docs only say "AES" without specifying key size — let the actual decoded length decide.
+**Demo sequencing (deliberate, not accidental):** show a FRESH wallet signing up live → dashboard shows "0 of N qualifying deposits, not yet eligible" → then switch to a separately pre-aged demo wallet (real faucet deposits made across several real days before the demo) → show it borrowing successfully. Showing the ineligible state first is a *stronger* demo — it proves the gate is real, not just asserted.
 
-### Which endpoints need encryption vs. plain JSON
+**Identity vs. creditworthiness — keep conceptually separate in all code/UI:** `complianceVerify()` (identity gate) passes instantly on verification. The inflow-history threshold (creditworthiness gate) is a separate, additional check only enforced in `borrow()`. A brand-new verified wallet can sign up and even deposit (if it were a cooperative admin) instantly — it just can't *borrow* until it has earned history. This is core to the product's thesis, not a limitation to work around.
 
-Encrypted (wrap as `{"data": "<Base64 ciphertext>"}`): `generate_apass`, `update_status`, `validator/grant`, `validator/register`, `validator/set_rule`/`add_rule`/`remove_rule`/`set_paused`, all `atoken/*` mutation endpoints.
-Plain JSON (no encryption): `query_apass`, `query_txs`, `validator/is_register`, `validator/rules`, `validator/verify`, `validator/is_paused`, all Fiat Ramp endpoints.
-`cleanverse-client.service.ts` should expose both `postEncrypted()` and `postPlain()` methods so each route calls the correct one.
+---
 
-### Sanity check before writing NestJS integration code
+## 7. Simulating Remittance for the Demo — whitelist not yet integrated
 
-Test credentials directly with `curl` first, isolated from the app, against a plain-JSON endpoint (so it only tests `api-id`, not AES setup):
+**Status: `add_whitelist_for_institutional` is NOT integrated.** This means a genuine USDC send from an unwhitelisted sender to Amaka's deposit address will NOT auto-convert to aUSDC (per Cleanverse's own confirmation — see §8/known findings) — it bounces back as plain USDC.
 
-```bash
-curl -X POST https://uatapi.cleanverse.com/api/cooperate/query_apass \
-  -H "Content-Type: application/json" \
-  -H "api-id: YOUR_SANDBOX_API_ID" \
-  -d '{"chain": "base", "address": "0x0000000000000000000000000000000000dEaD"}'
-```
+**Decision: do not build this before the hackathon.** It requires submitting real-looking institutional metadata (`entityName`, `license`, `logoUrl`) that doesn't naturally exist for a hackathon demo, and the added scope isn't worth it given everything else already built.
 
-A `0002`-style "not found" response confirms auth is working (the address just doesn't have an A-Pass). A `403 Forbidden` means the `api-id` itself is wrong or not yet activated — resolve this before writing any backend code against it.
+**Demo approach instead:** simulate incoming remittance via the direct faucet endpoint (`POST /faucet`) minting aUSDC into Amaka's wallet. State this explicitly in the demo narration: *"For this demo, incoming remittance is simulated via Cleanverse's testnet faucet — in production this step is the institutional deposit whitelist, where a registered remittance partner's transfers auto-convert to verified aUSDC automatically."* Name the exact endpoint and its requirements in the write-up — specificity reads as more credible than vague roadmap language.
 
-### Security rule for working with Antigravity — critical
+---
 
-**Never paste the actual `api-id` or `api-key` values into the Antigravity chat window, and never write real values into this brief or any other file the agent reads.** Reference them only by environment variable name (`CLEANVERSE_API_ID`, `CLEANVERSE_API_KEY`) in prompts and docs. The real values belong only in the local, gitignored `.env` file. This matters especially given the plan to push this repo publicly on Aug 8 — a secret that lands in git history is retrievable forever even after being removed in a later commit, so it must never be committed in the first place.
+## 8. Explicitly Deferred / Roadmap-Only (named precisely, not vaguely, in the write-up)
+
+- **Institutional deposit whitelist** (`add_whitelist_for_institutional`) — see §7.
+- **Public/open liquidity provision** — share-based (ERC-4626-style) proportional interest accounting for non-cooperative depositors. Named as concrete next step, not built.
+- **Fiat Ramp** (`query_ramp_quote` → `create_ramp_widget_url` → `query_ramp_order`) — lets users cash out to NGN/bank/mobile money. Real, separate integration surface; strongest "beyond the hackathon" story but deliberately out of the current build.
+- **Cleanverse Factory Mode** (`validator/grant`, multi-pool via Cleanverse's own registrar) — deliberately rejected in favor of internal multi-tenancy (§3) specifically to avoid the external-approval dependency risk this close to submission.
+- **Monad deployment** — stretch goal at most. OnchainKit/Smart Wallet gas sponsorship does not extend to Monad; would need a separate chain-agnostic onboarding path (Privy identified as the fallback) if pursued. Not a committed milestone.
+- **Time-accruing interest** — flat repayment fee used instead; accrual logic named as a future refinement.
+- **`download_travel_rule`** — compliance reporting on larger transactions; cheap, single plain-JSON call, worth adding if time permits but not core.
+- **`update_status` on default** — freezing a defaulted borrower's A-Pass; closes the loop on a risk-mitigation claim already made in the write-up. Worth adding if time permits.
+- Full list of REST endpoints out of scope for the hackathon build otherwise unchanged from the trimmed API reference (see `docs/cleanverse-api-reference.md`): A-Token issuance/registration/wrapped variants, `query_apass_list`.
+
+---
+
+## 9. Commit Strategy — important, follow carefully
+
+- Build and learn now (pre-Aug 8) — legitimate prep, not against the rules.
+- Use git normally starting now — do not withhold commits while prepping.
+- Keep the repo private (or unpushed) until ready.
+- Push to public GitHub once, preserving full commit history, at or after Aug 8. GitHub preserves real author/commit dates regardless of push time.
+- Deliberately hold back genuine, substantial integration milestones for Aug 8–9 itself — real work (end-to-end wiring, testnet deployment, `complianceVerify` gating a live transaction, real debugging), not cosmetic polish, needs to visibly happen inside the window.
+
+---
+
+## 10. Tech Stack (unchanged from earlier decisions, OnchainKit added)
+
+| Layer | Choice |
+|---|---|
+| Smart contracts | Solidity, Hardhat (TypeScript) |
+| Backend | NestJS (Node.js + TypeScript) |
+| Frontend | Vite + React + TypeScript |
+| Wallet/chain interaction | wagmi + viem |
+| **Onboarding/wallet UX** | **OnchainKit (Coinbase Smart Wallet, passkey login, Paymaster gas sponsorship) — Base-native** |
+| Encryption | Node's built-in `crypto` (AES-256/128-CBC depending on decoded key length — verify against real credentials) |
+| Chain | Base (Sepolia testnet for development) |
+
+---
+
+## 11. Credentials Handling — follow exactly, do not deviate
+
+- **`api-id`** — plain HTTP header, not secret-secret, but never hardcoded or committed.
+- **`api-key`** — never sent over the network; used locally only as the AES key. Treat as a real secret.
+- Both live only in `backend/.env` (gitignored before first commit). `.env.example` holds placeholder keys only.
+- **Never paste real `api-id`/`api-key` values into the Antigravity chat window or into this brief or any committed file** — reference only by env var name. This matters especially given the repo goes public on Aug 8; a secret in git history is retrievable forever even after later removal.
+- Encrypted endpoints (`{"data": "<Base64 ciphertext>"}`): `generate_apass`, `validator/register`, all `atoken/*` mutations. Plain JSON: `query_apass`, `query_txs`, `validator/is_register`/`verify`/`rules`/`is_paused`, `query_deposit_atoken_list`, `query_deposit_address`, `verify_apass`, `faucet`. Full detail in `docs/cleanverse-api-reference.md`.
+- Sanity-check credentials with an isolated `curl` call against a plain-JSON endpoint before writing any NestJS integration code against them.
+
+---
+
+## 12. Team Background (for submission form context)
+Solo builder — software engineer with hands-on experience across Rust, Solana (Anchor, Pinocchio), Node.js, TypeScript, and Fastify. Currently building a separate USDC-based payments app for Nigerian users (KOLO), giving direct, practical experience with stablecoin rails, wallet infrastructure, and payment confirmation in the Nigerian market this project targets.
