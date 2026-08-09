@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  ShieldAlert,
   Search,
   UserCheck,
   Snowflake,
@@ -88,7 +87,7 @@ export function MembersRiskPage() {
     try {
       await freezeMutation.mutateAsync({ address: activeMember, reason: freezeReason });
       toast({
-        tone: "warning",
+        tone: "info",
         title: "Account frozen",
         description: `Frozen verification status for ${shortenAddress(activeMember)}. Verification revoked.`,
       });

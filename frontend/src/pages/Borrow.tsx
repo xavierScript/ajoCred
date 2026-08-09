@@ -16,6 +16,7 @@ import { usePoolPosition } from "@/hooks/usePool";
 import { useTokenDecimals, useTokenSymbol, useTokenBalance } from "@/hooks/useToken";
 import { useVerify, useEligibility, useCoopStats } from "@/hooks/useBackend";
 import { useSelectedCoop } from "@/hooks/useSelectedCoop";
+import { INTEREST_BPS } from "@/lib/contracts";
 import { formatToken, humanizeError } from "@/lib/utils";
 
 type Mode = "borrow" | "repay";
@@ -201,6 +202,7 @@ export function BorrowPage() {
                 action="repay"
                 coopId={coopId}
                 needsApproval
+                feeBps={INTEREST_BPS}
                 account={address}
                 decimals={dec}
                 symbol={symbol}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ShieldCheck, Plus, CheckCircle2, XCircle, RotateCcw } from "lucide-react";
+import { ShieldCheck, Plus, XCircle, RotateCcw } from "lucide-react";
 import { Page, PageHeader } from "@/components/layout/Page";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -49,7 +49,7 @@ export function InstitutionalWhitelistPage() {
     try {
       await removeMutation.mutateAsync({ walletAddress: addr });
       toast({
-        tone: "warning",
+        tone: "info",
         title: "Address deactivated",
         description: `Deactivated institutional deposit permissions for ${shortenAddress(addr)}.`,
       });

@@ -25,11 +25,20 @@ export class TransactionsController {
   }
 
   /**
-   * POST /api/transactions/travel-rule/:txHash
+   * POST /api/transactions/travel-rule/:txHash?address=&chain=
    * Downloads a Travel Rule compliance report for the given outbound transaction.
+   * Cleanverse requires the wallet ({ chain, address }) with the txHash.
    */
   @Post('travel-rule/:txHash')
-  async travelRule(@Param('txHash') txHash: string) {
-    return this.transactionsService.travelRule(txHash);
+  async travelRule(
+    @Param('txHash') txHash: string,
+    @Query('address') address: string,
+    @Query('chain') chain?: string,
+  ) {
+    return this.transactionsService.travelRule(
+      txHash,
+      address,
+      chain ?? DEFAULT_CHAIN,
+    );
   }
 }

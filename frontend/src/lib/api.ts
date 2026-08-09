@@ -68,8 +68,11 @@ export const api = {
   transactions: {
     query: (address: string, chain = "base") =>
       request<QueryTxsResult>(`/api/transactions/${address}?chain=${chain}`),
-    travelRule: (txHash: string) =>
-      request<TravelRuleResult>(`/api/transactions/travel-rule/${txHash}`),
+    travelRule: (txHash: string, address: string, chain = "base") =>
+      request<TravelRuleResult>(
+        `/api/transactions/travel-rule/${txHash}?address=${address}&chain=${chain}`,
+        { method: "POST" },
+      ),
   },
   eligibility: {
     get: (address: string, chain = "base") =>

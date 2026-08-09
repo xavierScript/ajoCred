@@ -53,9 +53,18 @@ export class TransactionsService {
 
   /**
    * Download a Travel Rule compliance report PDF for a given transaction hash.
-   * Wraps Cleanverse `/download_travel_rule`.
+   * Wraps Cleanverse `/download_travel_rule`, which requires the wallet
+   * ({ chain, address }) alongside the txHash — omitting it returns a 0001
+   * bad-parameter error. Returns { downloadUrl, fileName }.
    */
-  async travelRule(txHash: string): Promise<unknown> {
-    return this.cleanverse.postPlain('/download_travel_rule', { txHash });
+  async travelRule(
+    txHash: string,
+    address: string,
+    chain = 'base',
+  ): Promise<unknown> {
+    return this.cleanverse.postPlain('/download_travel_rule', {
+      txHash,
+      wallet: { chain, address },
+    });
   }
 }

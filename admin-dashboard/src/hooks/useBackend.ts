@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { api, ApiError, WhitelistEntry } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
+import type { WhitelistEntry } from "@/lib/api";
 import type {
   ApassData,
   Cooperative,
@@ -55,8 +56,9 @@ export function useTransactions(address?: string) {
 }
 
 export function useTravelRule() {
-  return useMutation<TravelRuleResult, ApiError, string>({
-    mutationFn: (txHash: string) => api.transactions.travelRule(txHash),
+  return useMutation<TravelRuleResult, ApiError, { txHash: string; address: string; chain?: string }>({
+    mutationFn: ({ txHash, address, chain }) =>
+      api.transactions.travelRule(txHash, address, chain),
   });
 }
 

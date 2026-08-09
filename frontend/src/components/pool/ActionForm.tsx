@@ -17,6 +17,12 @@ interface ActionFormProps {
   coopId: string;
   /** deposit & repay pull tokens from the user, so they need an ERC-20 allowance first. */
   needsApproval: boolean;
+  /**
+   * Interest fee (basis points) the pool pulls on top of the entered amount. Repay
+   * charges the borrower `amount + amount*feeBps/10000`, so the ERC-20 allowance must
+   * cover the fee too. Defaults to 0 (deposit pulls exactly the entered amount).
+   */
+  feeBps?: number;
   account?: Address;
   decimals?: number;
   symbol: string;
@@ -42,6 +48,7 @@ export function ActionForm({
   action,
   coopId,
   needsApproval,
+  feeBps = 0,
   account,
   decimals,
   symbol,
@@ -61,8 +68,16 @@ export function ActionForm({
   const allowance = useTokenAllowance(needsApproval ? account : undefined);
   const approve = useApproveToken();
 
+  // The pool pulls `amount + fee` for fee-bearing actions (repay), so the allowance
+  // must cover the fee. Rounded up to match the contract's integer division being a
+  // floor on its side — approving the ceiling never under-approves.
+  const requiredAllowance =
+    parsed !== null && feeBps > 0
+      ? parsed + (parsed * BigInt(feeBps) + 9999n) / 10000n
+      : parsed;
+
   const needsAllowance =
-    needsApproval && parsed !== null && (allowance.allowance ?? 0n) < parsed;
+    needsApproval && requiredAllowance !== null && (allowance.allowance ?? 0n) < requiredAllowance;
 
   // Refresh allowance once an approval confirms so the button flips to the action.
   const approvedHandled = useRef(false);
@@ -89,7 +104,7 @@ export function ActionForm({
   const submit = () => {
     if (parsed === null) return;
     if (needsAllowance) {
-      approve.approve(parsed);
+      approve.approve(requiredAllowance ?? parsed);
     } else {
       write.execute(BigInt(coopId), parsed);
     }

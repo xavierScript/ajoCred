@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileCheck, Download, AlertCircle, Search, ExternalLink } from "lucide-react";
+import { FileCheck, Download, AlertCircle } from "lucide-react";
 import { Page, PageHeader } from "@/components/layout/Page";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -10,6 +10,7 @@ import type { TravelRuleResult } from "@/types";
 
 export function CompliancePage() {
   const [txHashInput, setTxHashInput] = useState("");
+  const [addressInput, setAddressInput] = useState("");
   const [reportResult, setReportResult] = useState<TravelRuleResult | null>(null);
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -19,13 +20,17 @@ export function CompliancePage() {
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!txHashInput || !txHashInput.startsWith("0x")) return;
+    if (!addressInput || !addressInput.startsWith("0x")) return;
 
     setHasError(false);
     setReportResult(null);
 
     try {
-      const res = await travelRuleMutation.mutateAsync(txHashInput.trim());
-      if (res && res.success && (res.reportUrl || res.data)) {
+      const res = await travelRuleMutation.mutateAsync({
+        txHash: txHashInput.trim(),
+        address: addressInput.trim(),
+      });
+      if (res && res.downloadUrl) {
         setReportResult(res);
       } else {
         setHasError(true);
@@ -62,11 +67,20 @@ export function CompliancePage() {
                 required
               />
 
+              <Input
+                label="Wallet Address"
+                hint="The wallet that made the transaction — required by Cleanverse."
+                placeholder="0x..."
+                value={addressInput}
+                onChange={(e) => setAddressInput(e.target.value)}
+                required
+              />
+
               <Button
                 type="submit"
                 block
                 loading={travelRuleMutation.isPending}
-                disabled={!txHashInput.startsWith("0x")}
+                disabled={!txHashInput.startsWith("0x") || !addressInput.startsWith("0x")}
               >
                 Generate Compliance Report
               </Button>
@@ -92,13 +106,13 @@ export function CompliancePage() {
                   <span>Compliance Report Ready</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Verified report generated for transaction <span className="font-mono">{shortenHash(reportResult.txHash)}</span>.
+                  Verified report generated for transaction <span className="font-mono">{shortenHash(txHashInput)}</span>.
                 </p>
-                {reportResult.reportUrl && (
+                {reportResult.downloadUrl && (
                   <Button asChild block size="sm">
-                    <a href={reportResult.reportUrl} target="_blank" rel="noreferrer">
+                    <a href={reportResult.downloadUrl} target="_blank" rel="noreferrer">
                       <Download className="size-4" />
-                      Download PDF Report
+                      Download {reportResult.fileName ?? "PDF Report"}
                     </a>
                   </Button>
                 )}

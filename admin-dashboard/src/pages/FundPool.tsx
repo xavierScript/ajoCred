@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
-import { Coins, ArrowDownToLine, ArrowUpFromLine, AlertCircle, Building2, CheckCircle2 } from "lucide-react";
+import { Coins, Building2, CheckCircle2 } from "lucide-react";
 import { Page, PageHeader } from "@/components/layout/Page";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Stat } from "@/components/ui/Stat";
@@ -201,7 +201,7 @@ export function FundPoolPage() {
                   max={max}
                   maxLabel={mode === "deposit" ? "Max available" : "Pool balance"}
                   decimals={dec}
-                  onSetMax={setMax}
+                  onMax={setMax}
                 />
 
                 {error && <p className="text-xs font-medium text-destructive">{error}</p>}
@@ -226,7 +226,13 @@ export function FundPoolPage() {
                 )}
 
                 {(write.hash || approve.hash) && (
-                  <TxStatus hash={(write.hash || approve.hash)!} />
+                  <TxStatus
+                    isSubmitting={write.isSubmitting || approve.isPending}
+                    isConfirming={write.isConfirming}
+                    isSuccess={write.isSuccess}
+                    hash={(write.hash || approve.hash)!}
+                    successLabel={mode === "deposit" ? "Deposit" : "Withdrawal"}
+                  />
                 )}
               </form>
             )}

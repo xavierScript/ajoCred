@@ -55,8 +55,9 @@ export function useTransactions(address?: string) {
 }
 
 export function useTravelRule() {
-  return useMutation<TravelRuleResult, ApiError, string>({
-    mutationFn: (txHash: string) => api.transactions.travelRule(txHash),
+  return useMutation<TravelRuleResult, ApiError, { txHash: string; address: string; chain?: string }>({
+    mutationFn: ({ txHash, address, chain }) =>
+      api.transactions.travelRule(txHash, address, chain),
   });
 }
 

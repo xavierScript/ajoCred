@@ -1,11 +1,10 @@
 import { Link } from "react-router-dom";
-import { Building2, ShieldCheck, ArrowRight, Coins, AlertCircle } from "lucide-react";
+import { Building2, ShieldCheck, ArrowRight, Coins } from "lucide-react";
 import { Page, PageHeader } from "@/components/layout/Page";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Stat } from "@/components/ui/Stat";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Skeleton } from "@/components/ui/Skeleton";
 import { CopyButton } from "@/components/ui/CopyButton";
 import { useAdminCoop } from "@/hooks/useAdminCoop";
 import { useCooperative, useCoopStats } from "@/hooks/useBackend";

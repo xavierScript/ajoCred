@@ -107,10 +107,10 @@ export interface FreezeResult {
 }
 
 export interface TravelRuleResult {
-  success: boolean;
-  txHash: string;
-  reportUrl?: string;
-  data?: any;
+  /** Token-based, time-limited download link from Cleanverse (`data.downloadUrl`). */
+  downloadUrl?: string;
+  /** Suggested file name for the report (`data.fileName`). */
+  fileName?: string;
 }
 
 export interface RampQuote {

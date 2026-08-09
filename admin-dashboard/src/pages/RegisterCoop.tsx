@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
-import { Building2, Plus, CheckCircle2, ShieldAlert } from "lucide-react";
+import { Building2, Plus } from "lucide-react";
 import { Page, PageHeader } from "@/components/layout/Page";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
-import { Stat } from "@/components/ui/Stat";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { useAdminCoop } from "@/hooks/useAdminCoop";

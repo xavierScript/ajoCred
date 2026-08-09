@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAccount } from "wagmi";
-import { CreditCard, ExternalLink, ArrowRight, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
+import { CreditCard, ExternalLink, Clock, AlertTriangle } from "lucide-react";
 import { Page, PageHeader } from "@/components/layout/Page";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
