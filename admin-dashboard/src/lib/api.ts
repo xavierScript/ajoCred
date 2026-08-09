@@ -16,6 +16,15 @@ import type {
   RampPaymentMethod,
 } from "@/types";
 
+export interface WhitelistEntry {
+  chain: string;
+  symbol: string;
+  assetAddress: string;
+  walletAddress: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY ?? "";
 
@@ -128,6 +137,30 @@ export const api = {
         headers: { "x-admin-key": ADMIN_KEY },
         body: JSON.stringify({ userAddress }),
       }),
+    whitelist: {
+      getAddresses: (chain = "base") =>
+        request<{ entries: WhitelistEntry[] }>(`/api/admin/whitelist/addresses?chain=${chain}`, {
+          headers: { "x-admin-key": ADMIN_KEY },
+        }),
+      add: (walletAddresses: string[], chain = "base") =>
+        request<{ success: boolean; entries: WhitelistEntry[] }>("/api/admin/whitelist/add", {
+          method: "POST",
+          headers: { "x-admin-key": ADMIN_KEY },
+          body: JSON.stringify({ walletAddresses, chain }),
+        }),
+      remove: (walletAddress: string, chain = "base") =>
+        request<{ success: boolean; entries: WhitelistEntry[] }>("/api/admin/whitelist/remove", {
+          method: "POST",
+          headers: { "x-admin-key": ADMIN_KEY },
+          body: JSON.stringify({ walletAddress, chain }),
+        }),
+      restore: (walletAddress: string, chain = "base") =>
+        request<{ success: boolean; entries: WhitelistEntry[] }>("/api/admin/whitelist/restore", {
+          method: "POST",
+          headers: { "x-admin-key": ADMIN_KEY },
+          body: JSON.stringify({ walletAddress, chain }),
+        }),
+    },
   },
   ramp: {
     quote: (params: any) =>

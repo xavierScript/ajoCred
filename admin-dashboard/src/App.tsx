@@ -10,6 +10,7 @@ import { RegisterCoopPage } from "@/pages/RegisterCoop";
 import { FundPoolPage } from "@/pages/FundPool";
 import { MembersRiskPage } from "@/pages/MembersRisk";
 import { CompliancePage } from "@/pages/Compliance";
+import { InstitutionalWhitelistPage } from "@/pages/InstitutionalWhitelist";
 import { FiatRampPage } from "@/pages/FiatRamp";
 
 const router = createBrowserRouter([
@@ -54,6 +55,14 @@ const router = createBrowserRouter([
         element: (
           <RequireWallet>
             <CompliancePage />
+          </RequireWallet>
+        ),
+      },
+      {
+        path: "whitelist",
+        element: (
+          <RequireWallet>
+            <InstitutionalWhitelistPage />
           </RequireWallet>
         ),
       },

@@ -8,6 +8,7 @@ import {
   ShieldAlert,
   FileCheck,
   CreditCard,
+  ShieldCheck,
 } from "lucide-react";
 import { useState } from "react";
 import { Wordmark } from "@/components/Logo";
@@ -24,6 +25,7 @@ const nav = [
   { path: "/fund", label: "Fund Pool", icon: Coins },
   { path: "/members", label: "Members & Risk", icon: ShieldAlert },
   { path: "/compliance", label: "Compliance", icon: FileCheck },
+  { path: "/whitelist", label: "Whitelist", icon: ShieldCheck },
   { path: "/ramp", label: "Fiat Ramp", icon: CreditCard },
 ];
 
@@ -56,13 +58,13 @@ export function AdminHeader() {
         </div>
 
         {/* Desktop navigation */}
-        <nav className="hidden items-center gap-5 xl:flex">
+        <nav className="hidden items-center gap-4 xl:flex">
           {nav.map(({ path, label, icon: Icon }) => (
             <Link
               key={path}
               to={path}
               className={cn(
-                "flex items-center gap-2 text-sm font-medium transition-colors hover:text-foreground",
+                "flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-foreground",
                 pathname === path ? "text-foreground font-semibold" : "text-muted-foreground"
               )}
             >

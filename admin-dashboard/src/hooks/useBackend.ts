@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, WhitelistEntry } from "@/lib/api";
 import type {
   ApassData,
   Cooperative,
@@ -166,6 +166,48 @@ export function useFreeze() {
 export function useUnfreeze() {
   return useMutation<FreezeResult, ApiError, string>({
     mutationFn: (address: string) => api.admin.unfreeze(address),
+  });
+}
+
+export function useWhitelistAddresses(chain = "base") {
+  return useQuery<{ entries: WhitelistEntry[] }, ApiError>({
+    queryKey: ["whitelist-addresses", chain],
+    queryFn: () => api.admin.whitelist.getAddresses(chain),
+    retry: retryUnlessClientError,
+    staleTime: 15_000,
+  });
+}
+
+export function useAddWhitelist() {
+  return useMutation<
+    { success: boolean; entries: WhitelistEntry[] },
+    ApiError,
+    { walletAddresses: string[]; chain?: string }
+  >({
+    mutationFn: ({ walletAddresses, chain }) =>
+      api.admin.whitelist.add(walletAddresses, chain),
+  });
+}
+
+export function useRemoveWhitelist() {
+  return useMutation<
+    { success: boolean; entries: WhitelistEntry[] },
+    ApiError,
+    { walletAddress: string; chain?: string }
+  >({
+    mutationFn: ({ walletAddress, chain }) =>
+      api.admin.whitelist.remove(walletAddress, chain),
+  });
+}
+
+export function useRestoreWhitelist() {
+  return useMutation<
+    { success: boolean; entries: WhitelistEntry[] },
+    ApiError,
+    { walletAddress: string; chain?: string }
+  >({
+    mutationFn: ({ walletAddress, chain }) =>
+      api.admin.whitelist.restore(walletAddress, chain),
   });
 }
 
