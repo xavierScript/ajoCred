@@ -6,6 +6,11 @@ import { wagmiConfig } from "@/lib/wagmiConfig";
 
 const cdpProjectId = import.meta.env.VITE_CDP_PROJECT_ID;
 
+const validCdpId =
+  typeof cdpProjectId === "string" &&
+  cdpProjectId.trim() !== "" &&
+  cdpProjectId !== "undefined";
+
 export function Web3Provider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
@@ -22,14 +27,14 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     </WagmiProvider>
   );
 
-  // The CDP context powers email sign-in. It is only mounted when a project id
+  // The CDP context powers email sign-in. It is only mounted when a valid project id
   // is configured; without one the app still runs on external wallets alone.
-  if (!cdpProjectId) return tree;
+  if (!validCdpId) return tree;
 
   return (
     <CDPReactProvider
       config={{
-        projectId: cdpProjectId,
+        projectId: cdpProjectId.trim(),
         ethereum: { createOnLogin: "eoa" },
         appName: "AjoCred",
         authMethods: ["email"],

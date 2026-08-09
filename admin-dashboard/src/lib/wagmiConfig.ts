@@ -6,15 +6,25 @@ import { createCDPEmbeddedWalletConnector } from "@coinbase/cdp-wagmi";
 const cdpProjectId = import.meta.env.VITE_CDP_PROJECT_ID;
 const walletConnectProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
 
+const validCdpId =
+  typeof cdpProjectId === "string" &&
+  cdpProjectId.trim() !== "" &&
+  cdpProjectId !== "undefined";
+
+const validWcId =
+  typeof walletConnectProjectId === "string" &&
+  walletConnectProjectId.trim() !== "" &&
+  walletConnectProjectId !== "undefined";
+
 const transports = {
   [baseSepolia.id]: http(),
 };
 
-const cdpConnector = cdpProjectId
+const cdpConnector = validCdpId
   ? [
       createCDPEmbeddedWalletConnector({
         cdpConfig: {
-          projectId: cdpProjectId,
+          projectId: cdpProjectId.trim(),
           ethereum: { createOnLogin: "eoa" },
         },
         providerConfig: {
@@ -26,8 +36,8 @@ const cdpConnector = cdpProjectId
     ]
   : [];
 
-const walletConnectConnector = walletConnectProjectId
-  ? [walletConnect({ projectId: walletConnectProjectId })]
+const walletConnectConnector = validWcId
+  ? [walletConnect({ projectId: walletConnectProjectId.trim() })]
   : [];
 
 export const wagmiConfig = createConfig({
@@ -35,7 +45,7 @@ export const wagmiConfig = createConfig({
   connectors: [
     ...cdpConnector,
     injected(),
-    coinbaseWallet({ appName: "AjoCred Admin Portal" }),
+    coinbaseWallet({ appName: "AjoCred" }),
     ...walletConnectConnector,
   ],
   transports,
