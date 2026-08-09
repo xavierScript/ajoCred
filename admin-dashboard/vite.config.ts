@@ -13,4 +13,15 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    include: [
+      "@coinbase/cdp-react",
+      "@coinbase/cdp-wagmi",
+      "@coinbase/cdp-hooks",
+      "@coinbase/cdp-core",
+      "@base-org/account",
+      "tslib",
+      "rxjs",
+    ],
+  },
 });
