@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
+import { useQueryClient } from "@tanstack/react-query";
 import { Coins, Building2, CheckCircle2 } from "lucide-react";
 import { Page, PageHeader } from "@/components/layout/Page";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Stat } from "@/components/ui/Stat";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import { SegmentedControl } from "@/components/pool/SegmentedControl";
 import { AmountField } from "@/components/pool/AmountField";
 import { TxStatus } from "@/components/pool/TxStatus";
@@ -27,6 +29,8 @@ type Mode = "deposit" | "withdraw";
 
 export function FundPoolPage() {
   const { address } = useAccount();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { selectedCoopId } = useAdminCoop();
   const [mode, setMode] = useState<Mode>("deposit");
 
@@ -41,7 +45,10 @@ export function FundPoolPage() {
   const approve = useApproveToken();
   const write = usePoolAction(mode);
 
+  const pendingAutoDepositRef = useRef<bigint | null>(null);
+
   const refetchAll = () => {
+    queryClient.invalidateQueries();
     refetchBalance();
     refetchAllowance();
     refetchStats();
@@ -73,19 +80,47 @@ export function FundPoolPage() {
     max,
   });
 
+  const hasAmount = parsed !== null && parsed > 0n;
+
   const needsApproval =
     mode === "deposit" &&
-    parsed !== null &&
+    hasAmount &&
     allowance !== undefined &&
     allowance < parsed;
 
+  // Automated transaction chaining: when approval confirms on-chain, automatically execute deposit
+  const approvedHandled = useRef(false);
+  useEffect(() => {
+    if (approve.isSuccess && !approvedHandled.current) {
+      approvedHandled.current = true;
+      void queryClient.invalidateQueries();
+      void refetchAllowance();
+
+      if (pendingAutoDepositRef.current !== null && selectedCoopId) {
+        const amountToDeposit = pendingAutoDepositRef.current;
+        pendingAutoDepositRef.current = null;
+        toast({
+          tone: "success",
+          title: "Approval confirmed",
+          description: `aUSDC approved! Opening wallet for Deposit transaction...`,
+        });
+        write.execute(BigInt(selectedCoopId), amountToDeposit);
+      }
+    }
+    if (!approve.isSuccess) {
+      approvedHandled.current = false;
+    }
+  }, [approve.isSuccess, refetchAllowance, queryClient, selectedCoopId, write, toast]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCoopId || parsed === null) return;
+    if (!selectedCoopId || !hasAmount || parsed === null) return;
 
     if (needsApproval) {
+      pendingAutoDepositRef.current = parsed;
       approve.approve(parsed);
     } else {
+      pendingAutoDepositRef.current = null;
       write.execute(BigInt(selectedCoopId), parsed);
     }
   };
@@ -114,6 +149,15 @@ export function FundPoolPage() {
 
   const isSubmitting = approve.isPending || write.isSubmitting || write.isConfirming;
   const isSuccess = write.isSuccess;
+
+  const buttonLabel =
+    mode === "deposit"
+      ? hasAmount
+        ? needsApproval
+          ? `Step 1 of 2: Approve ${symbol}`
+          : `Step 2 of 2: Deposit ${symbol} to Pool`
+        : `Deposit ${symbol} to Pool`
+      : `Withdraw ${symbol} from Pool`;
 
   return (
     <Page>
@@ -214,13 +258,9 @@ export function FundPoolPage() {
                   type="submit"
                   block
                   loading={isSubmitting}
-                  disabled={parsed === null || !!error || !address}
+                  disabled={!hasAmount || !!error || !address}
                 >
-                  {needsApproval
-                    ? `Step 1 of 2: Approve ${symbol}`
-                    : mode === "deposit"
-                    ? `Deposit ${symbol} to Pool`
-                    : `Withdraw ${symbol} from Pool`}
+                  {buttonLabel}
                 </Button>
 
                 {(write.error || approve.error) && (

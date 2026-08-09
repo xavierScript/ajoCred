@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { Address } from "viem";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { usePoolAction } from "@/hooks/usePool";
@@ -62,11 +63,16 @@ export function ActionForm({
   onSuccess,
 }: ActionFormProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { value, setValue, parsed, error, setMax, reset } = useAmountInput({ decimals, max });
 
   const write = usePoolAction(action);
   const allowance = useTokenAllowance(needsApproval ? account : undefined);
   const approve = useApproveToken();
+
+  const pendingAutoActionRef = useRef<bigint | null>(null);
+
+  const hasAmount = parsed !== null && parsed > 0n;
 
   // The pool pulls `amount + fee` for fee-bearing actions (repay), so the allowance
   // must cover the fee. Rounded up to match the contract's integer division being a
@@ -77,41 +83,68 @@ export function ActionForm({
       : parsed;
 
   const needsAllowance =
-    needsApproval && requiredAllowance !== null && (allowance.allowance ?? 0n) < requiredAllowance;
+    needsApproval &&
+    hasAmount &&
+    requiredAllowance !== null &&
+    (allowance.allowance ?? 0n) < requiredAllowance;
 
-  // Refresh allowance once an approval confirms so the button flips to the action.
+  // Refresh allowance once an approval confirms & automatically chain the 2nd contract action
   const approvedHandled = useRef(false);
   useEffect(() => {
     if (approve.isSuccess && !approvedHandled.current) {
       approvedHandled.current = true;
-      allowance.refetch();
-      toast({ tone: "success", title: "Approval confirmed", description: `You can now ${action}.` });
+      void queryClient.invalidateQueries();
+      void allowance.refetch();
+
+      if (pendingAutoActionRef.current !== null) {
+        const amountToExecute = pendingAutoActionRef.current;
+        pendingAutoActionRef.current = null;
+        toast({
+          tone: "success",
+          title: "Approval confirmed",
+          description: `aUSDC approved! Opening wallet for ${submitLabel}...`,
+        });
+        write.execute(BigInt(coopId), amountToExecute);
+      }
     }
-    if (!approve.isSuccess) approvedHandled.current = false;
-  }, [approve.isSuccess, allowance, toast, action]);
+    if (!approve.isSuccess) {
+      approvedHandled.current = false;
+    }
+  }, [approve.isSuccess, allowance, queryClient, coopId, write, submitLabel, toast]);
 
   // On a confirmed write: notify, clear the field, and let the page refetch.
   const writeHandled = useRef<string | null>(null);
   useEffect(() => {
     if (write.isSuccess && write.hash && writeHandled.current !== write.hash) {
       writeHandled.current = write.hash;
+      void queryClient.invalidateQueries();
       toast({ tone: "success", title: `${successLabel} confirmed`, description: "Your position has been updated." });
       reset();
       onSuccess?.();
     }
-  }, [write.isSuccess, write.hash, successLabel, reset, onSuccess, toast]);
+  }, [write.isSuccess, write.hash, successLabel, reset, onSuccess, queryClient, toast]);
 
   const submit = () => {
-    if (parsed === null) return;
+    if (!hasAmount || parsed === null) return;
     if (needsAllowance) {
+      pendingAutoActionRef.current = parsed;
       approve.approve(requiredAllowance ?? parsed);
     } else {
+      pendingAutoActionRef.current = null;
       write.execute(BigInt(coopId), parsed);
     }
   };
 
   const busy = write.isSubmitting || write.isConfirming || approve.isPending;
-  const canSubmit = !disabled && !busy && parsed !== null && !error;
+  const canSubmit = !disabled && !busy && hasAmount && !error;
+
+  const buttonText = hasAmount
+    ? needsAllowance
+      ? `Step 1 of 2: Approve ${symbol}`
+      : needsApproval
+      ? `Step 2 of 2: ${submitLabel}`
+      : submitLabel
+    : submitLabel;
 
   return (
     <div className="space-y-4">
@@ -135,7 +168,7 @@ export function ActionForm({
         disabled={!canSubmit}
         loading={busy}
       >
-        {needsAllowance ? `Approve ${symbol}` : submitLabel}
+        {buttonText}
       </Button>
 
       {disabled && disabledReason && (
