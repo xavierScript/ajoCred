@@ -5,10 +5,20 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { HeroPreview } from "@/components/landing/HeroPreview";
 import { StepList } from "@/components/landing/StepList";
+import { useVerify } from "@/hooks/useBackend";
 
 export function LandingPage() {
-  const { isConnected } = useAccount();
-  const primaryHref = isConnected ? "/dashboard" : "/onboard";
+  const { address, isConnected } = useAccount();
+  const verify = useVerify(address);
+
+  const isUnverified = isConnected && !verify.isLoading && verify.data && !verify.data.valid;
+  const primaryHref = !isConnected || isUnverified ? "/onboard" : "/dashboard";
+  const primaryLabel = !isConnected
+    ? "Check your limit"
+    : isUnverified
+    ? "Verify your identity"
+    : "Go to dashboard";
+
   const adminUrl = import.meta.env.VITE_ADMIN_URL || "#";
 
   return (
@@ -30,7 +40,7 @@ export function LandingPage() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button asChild size="lg">
               <Link to={primaryHref}>
-                {isConnected ? "Go to dashboard" : "Check your limit"}
+                {primaryLabel}
                 <ArrowRight className="size-4" />
               </Link>
             </Button>
@@ -76,7 +86,7 @@ export function LandingPage() {
             "Choose a cooperative, borrow when needed, and repay on time.",
           ]}
           href={primaryHref}
-          cta="Check your limit"
+          cta={primaryLabel}
           isExternal={false}
         />
         <AudienceCard

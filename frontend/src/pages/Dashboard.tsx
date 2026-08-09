@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAccount } from "wagmi";
-import { Wallet, History, Coins, CreditCard } from "lucide-react";
+import { Wallet, History, Coins, CreditCard, ShieldAlert } from "lucide-react";
 import { Page, PageHeader } from "@/components/layout/Page";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -44,6 +44,8 @@ export function DashboardPage() {
     );
   }
 
+  const isUnverified = !verify.isLoading && verify.data && !verify.data.valid;
+
   return (
     <Page>
       <PageHeader
@@ -62,6 +64,24 @@ export function DashboardPage() {
           </div>
         }
       />
+
+      {/* Prominent Verification Alert Banner if unverified */}
+      {isUnverified && (
+        <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="size-5 text-amber-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="font-semibold text-foreground text-sm">Identity Verification Required</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Your wallet is signed in but not yet verified with Cleanverse A-Pass. Complete a 1-click verification to unlock credit eligibility.
+              </p>
+            </div>
+          </div>
+          <Button asChild size="sm" className="shrink-0">
+            <Link to="/onboard">Verify Identity Now →</Link>
+          </Button>
+        </div>
+      )}
 
       {/* Account address strip */}
       {address && (

@@ -1,9 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, LayoutDashboard, Users, ArrowUpFromLine, CreditCard } from "lucide-react";
+import { Menu, X, LayoutDashboard, Users, ArrowUpFromLine, CreditCard, ShieldAlert } from "lucide-react";
 import { useState } from "react";
+import { useAccount } from "wagmi";
 import { Wordmark } from "@/components/Logo";
 import { WalletButton } from "@/components/WalletButton";
+import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "./ThemeToggle";
+import { useVerify } from "@/hooks/useBackend";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -16,6 +19,10 @@ const nav = [
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { pathname } = useLocation();
+  const { address, isConnected } = useAccount();
+  const verify = useVerify(address);
+
+  const isUnverified = isConnected && !verify.isLoading && verify.data && !verify.data.valid;
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -42,6 +49,14 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
+          {isUnverified && (
+            <Button asChild size="sm" variant="outline" className="border-amber-500/40 text-amber-500 hover:bg-amber-500/10">
+              <Link to="/onboard">
+                <ShieldAlert className="size-3.5 animate-pulse text-amber-500" />
+                Verify ID
+              </Link>
+            </Button>
+          )}
           <ThemeToggle />
           <WalletButton compact />
           <button
