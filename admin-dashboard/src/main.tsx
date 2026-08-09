@@ -1,3 +1,15 @@
+import { Buffer } from "buffer";
+import process from "process";
+
+if (typeof window !== "undefined") {
+  if (!window.Buffer) {
+    (window as unknown as { Buffer: typeof Buffer }).Buffer = Buffer;
+  }
+  if (!window.process) {
+    (window as unknown as { process: typeof process }).process = process;
+  }
+}
+
 import { Component, type ReactNode, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
