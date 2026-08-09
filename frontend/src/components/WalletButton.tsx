@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { AuthButton } from "@coinbase/cdp-react/components/AuthButton";
+import { AuthButton } from "@coinbase/cdp-react";
 import { useSignOut } from "@coinbase/cdp-hooks";
 import { CDP_CONNECTOR_ID } from "@coinbase/cdp-wagmi";
 import { ChevronDown, LogOut, User } from "lucide-react";

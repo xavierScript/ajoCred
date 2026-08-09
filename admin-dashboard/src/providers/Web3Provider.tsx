@@ -1,7 +1,7 @@
 import { type ReactNode, useState } from "react";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { CDPReactProvider } from "@coinbase/cdp-react/components/CDPReactProvider";
+import { CDPReactProvider } from "@coinbase/cdp-react";
 import { wagmiConfig } from "@/lib/wagmiConfig";
 
 const cdpProjectId = import.meta.env.VITE_CDP_PROJECT_ID;
