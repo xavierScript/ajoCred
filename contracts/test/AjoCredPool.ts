@@ -8,8 +8,13 @@ const { viem, networkHelpers } = await hre.network.create();
 const DECIMALS = 6;
 const amount = (n: number) => parseUnits(n.toString(), DECIMALS);
 
+// The seed cooperative registered by the fixture.
+const COOP_ID = 1n;
+const COOP_MAX_LIQUIDITY = amount(5000);
+const COOP_MIN_TIER = 0;
+
 async function deployPoolFixture() {
-  const [owner, lp, borrower, other] = await viem.getWalletClients();
+  const [owner, coopAdmin, borrower, other] = await viem.getWalletClients();
 
   const token = await viem.deployContract("MockERC20", [
     "Mock aUSDC",
@@ -23,22 +28,33 @@ async function deployPoolFixture() {
     owner.account.address,
   ]);
 
-  // Fund LP and borrower with mock aUSDC, and approve the pool.
-  await token.write.mint([lp.account.address, amount(10_000)]);
+  // Register a seed cooperative administered by `coopAdmin`.
+  await pool.write.registerCooperative([
+    coopAdmin.account.address,
+    COOP_MAX_LIQUIDITY,
+    COOP_MIN_TIER,
+  ]);
+
+  // Fund the cooperative admin (funds the pool) and the borrower (repays with interest),
+  // and approve the pool to pull their tokens.
+  await token.write.mint([coopAdmin.account.address, amount(10_000)]);
   await token.write.mint([borrower.account.address, amount(10_000)]);
 
-  const tokenAsLp = await viem.getContractAt("MockERC20", token.address, {
-    client: { wallet: lp },
+  const tokenAsAdmin = await viem.getContractAt("MockERC20", token.address, {
+    client: { wallet: coopAdmin },
   });
-  await tokenAsLp.write.approve([pool.address, amount(10_000)]);
+  await tokenAsAdmin.write.approve([pool.address, amount(10_000)]);
 
   const tokenAsBorrower = await viem.getContractAt("MockERC20", token.address, {
     client: { wallet: borrower },
   });
   await tokenAsBorrower.write.approve([pool.address, amount(10_000)]);
 
-  const poolAsLp = await viem.getContractAt("AjoCredPool", pool.address, {
-    client: { wallet: lp },
+  const poolAsOwner = await viem.getContractAt("AjoCredPool", pool.address, {
+    client: { wallet: owner },
+  });
+  const poolAsAdmin = await viem.getContractAt("AjoCredPool", pool.address, {
+    client: { wallet: coopAdmin },
   });
   const poolAsBorrower = await viem.getContractAt("AjoCredPool", pool.address, {
     client: { wallet: borrower },
@@ -46,18 +62,17 @@ async function deployPoolFixture() {
   const poolAsOther = await viem.getContractAt("AjoCredPool", pool.address, {
     client: { wallet: other },
   });
-  const validatorAsAdmin = validator;
 
   return {
     owner,
-    lp,
+    coopAdmin,
     borrower,
     other,
     token,
     validator,
-    validatorAsAdmin,
     pool,
-    poolAsLp,
+    poolAsOwner,
+    poolAsAdmin,
     poolAsBorrower,
     poolAsOther,
   };
@@ -78,79 +93,175 @@ describe("AjoCredPool", () => {
     );
   });
 
-  describe("deposit", () => {
-    it("accepts a compliant deposit and updates balances", async () => {
-      const { pool, poolAsLp, lp, token } =
+  describe("registerCooperative", () => {
+    it("records the seed cooperative and increments the count", async () => {
+      const { pool, coopAdmin } =
+        await networkHelpers.loadFixture(deployPoolFixture);
+
+      assert.equal(await pool.read.cooperativeCount(), 1n);
+
+      const coop = await pool.read.getCooperative([COOP_ID]);
+      assert.equal(getAddress(coop.admin), getAddress(coopAdmin.account.address));
+      assert.equal(coop.totalLiquidity, 0n);
+      assert.equal(coop.maxLiquidity, COOP_MAX_LIQUIDITY);
+      assert.equal(coop.minTier, COOP_MIN_TIER);
+      assert.equal(coop.active, true);
+    });
+
+    it("lets the owner register additional cooperatives", async () => {
+      const { pool, poolAsOwner, other } =
         await networkHelpers.loadFixture(deployPoolFixture);
 
       await viem.assertions.emitWithArgs(
-        poolAsLp.write.deposit([amount(1000)]),
+        poolAsOwner.write.registerCooperative([
+          other.account.address,
+          amount(1000),
+          2,
+        ]),
+        pool,
+        "CooperativeRegistered",
+        [2n, getAddress(other.account.address), amount(1000), 2],
+      );
+
+      assert.equal(await pool.read.cooperativeCount(), 2n);
+    });
+
+    it("reverts when a non-owner registers a cooperative", async () => {
+      const { poolAsOther, other } =
+        await networkHelpers.loadFixture(deployPoolFixture);
+
+      await viem.assertions.revertWithCustomError(
+        poolAsOther.write.registerCooperative([
+          other.account.address,
+          amount(1000),
+          0,
+        ]),
+        poolAsOther,
+        "OwnableUnauthorizedAccount",
+      );
+    });
+
+    it("reverts on a zero admin or zero cap", async () => {
+      const { poolAsOwner, other } =
+        await networkHelpers.loadFixture(deployPoolFixture);
+
+      await viem.assertions.revertWith(
+        poolAsOwner.write.registerCooperative([
+          "0x0000000000000000000000000000000000000000",
+          amount(1000),
+          0,
+        ]),
+        "AjoCred: admin=0",
+      );
+      await viem.assertions.revertWith(
+        poolAsOwner.write.registerCooperative([other.account.address, 0n, 0]),
+        "AjoCred: maxLiquidity=0",
+      );
+    });
+  });
+
+  describe("deposit", () => {
+    it("accepts a compliant deposit from the cooperative admin", async () => {
+      const { pool, poolAsAdmin, coopAdmin, token } =
+        await networkHelpers.loadFixture(deployPoolFixture);
+
+      await viem.assertions.emitWithArgs(
+        poolAsAdmin.write.deposit([COOP_ID, amount(1000)]),
         pool,
         "Deposited",
-        [getAddress(lp.account.address), amount(1000)],
+        [COOP_ID, getAddress(coopAdmin.account.address), amount(1000)],
       );
 
       assert.equal(
-        await pool.read.deposits([lp.account.address]),
+        await pool.read.deposits([COOP_ID, coopAdmin.account.address]),
         amount(1000),
       );
-      assert.equal(await pool.read.totalDeposits(), amount(1000));
+      const coop = await pool.read.getCooperative([COOP_ID]);
+      assert.equal(coop.totalLiquidity, amount(1000));
       assert.equal(await token.read.balanceOf([pool.address]), amount(1000));
     });
 
-    it("reverts when the depositor is not compliant", async () => {
-      const { poolAsLp, lp, validatorAsAdmin } =
+    it("reverts when a non-admin tries to fund the pool", async () => {
+      const { poolAsBorrower } =
         await networkHelpers.loadFixture(deployPoolFixture);
 
-      await validatorAsAdmin.write.setCompliant([lp.account.address, false]);
+      await viem.assertions.revertWith(
+        poolAsBorrower.write.deposit([COOP_ID, amount(100)]),
+        "AjoCred: only cooperative admin",
+      );
+    });
+
+    it("enforces the cooperative liquidity cap (capped pilot mode)", async () => {
+      const { poolAsAdmin } =
+        await networkHelpers.loadFixture(deployPoolFixture);
+
+      // Cap is 5000; a 5001 deposit must revert.
+      await viem.assertions.revertWith(
+        poolAsAdmin.write.deposit([COOP_ID, amount(5001)]),
+        "AjoCred: cap reached",
+      );
+
+      // A deposit at the cap succeeds; a further deposit then exceeds it.
+      await poolAsAdmin.write.deposit([COOP_ID, amount(5000)]);
+      await viem.assertions.revertWith(
+        poolAsAdmin.write.deposit([COOP_ID, amount(1)]),
+        "AjoCred: cap reached",
+      );
+    });
+
+    it("reverts when the admin is not compliant", async () => {
+      const { poolAsAdmin, coopAdmin, validator } =
+        await networkHelpers.loadFixture(deployPoolFixture);
+
+      await validator.write.setCompliant([coopAdmin.account.address, false]);
 
       await viem.assertions.revertWith(
-        poolAsLp.write.deposit([amount(100)]),
+        poolAsAdmin.write.deposit([COOP_ID, amount(100)]),
         "AjoCred: A-Pass not qualified",
       );
     });
 
-    it("reverts on a zero-amount deposit", async () => {
-      const { poolAsLp } = await networkHelpers.loadFixture(deployPoolFixture);
+    it("reverts for an unknown cooperative", async () => {
+      const { poolAsAdmin } =
+        await networkHelpers.loadFixture(deployPoolFixture);
 
       await viem.assertions.revertWith(
-        poolAsLp.write.deposit([0n]),
-        "AjoCred: zero amount",
+        poolAsAdmin.write.deposit([99n, amount(100)]),
+        "AjoCred: unknown cooperative",
       );
     });
   });
 
   describe("borrow", () => {
-    it("allows a borrower within their cap to draw against pool liquidity", async () => {
-      const { pool, poolAsLp, poolAsBorrower, borrower, owner, token } =
-        await networkHelpers.loadFixture(deployPoolFixture);
+    async function fundedFixture() {
+      const base = await networkHelpers.loadFixture(deployPoolFixture);
+      await base.poolAsAdmin.write.deposit([COOP_ID, amount(1000)]);
+      return base;
+    }
 
-      await poolAsLp.write.deposit([amount(1000)]);
+    it("allows a borrower within their cap to draw against coop liquidity", async () => {
+      const { pool, poolAsOwner, poolAsBorrower, borrower, token } =
+        await fundedFixture();
 
-      const poolAsOwner = await viem.getContractAt(
-        "AjoCredPool",
-        pool.address,
-        {
-          client: { wallet: owner },
-        },
-      );
       await poolAsOwner.write.setBorrowingCap([
+        COOP_ID,
         borrower.account.address,
         amount(200),
       ]);
 
       await viem.assertions.emitWithArgs(
-        poolAsBorrower.write.borrow([amount(150)]),
+        poolAsBorrower.write.borrow([COOP_ID, amount(150)]),
         pool,
         "Borrowed",
-        [getAddress(borrower.account.address), amount(150)],
+        [COOP_ID, getAddress(borrower.account.address), amount(150)],
       );
 
       assert.equal(
-        await pool.read.borrowings([borrower.account.address]),
+        await pool.read.borrowings([COOP_ID, borrower.account.address]),
         amount(150),
       );
-      assert.equal(await pool.read.totalBorrowings(), amount(150));
+      const coop = await pool.read.getCooperative([COOP_ID]);
+      assert.equal(coop.totalLiquidity, amount(850));
       assert.equal(
         await token.read.balanceOf([borrower.account.address]),
         amount(10_000) + amount(150),
@@ -158,210 +269,203 @@ describe("AjoCredPool", () => {
     });
 
     it("reverts when borrowing beyond the cap", async () => {
-      const { poolAsLp, poolAsBorrower, borrower, owner, pool } =
-        await networkHelpers.loadFixture(deployPoolFixture);
+      const { poolAsOwner, poolAsBorrower, borrower } = await fundedFixture();
 
-      await poolAsLp.write.deposit([amount(1000)]);
-      const poolAsOwner = await viem.getContractAt(
-        "AjoCredPool",
-        pool.address,
-        {
-          client: { wallet: owner },
-        },
-      );
       await poolAsOwner.write.setBorrowingCap([
+        COOP_ID,
         borrower.account.address,
         amount(100),
       ]);
 
       await viem.assertions.revertWith(
-        poolAsBorrower.write.borrow([amount(101)]),
+        poolAsBorrower.write.borrow([COOP_ID, amount(101)]),
         "AjoCred: exceeds borrowing cap",
       );
     });
 
-    it("reverts when borrowing beyond available liquidity", async () => {
-      const { poolAsLp, poolAsBorrower, borrower, owner, pool } =
-        await networkHelpers.loadFixture(deployPoolFixture);
+    it("reverts when borrowing beyond coop liquidity", async () => {
+      const { poolAsOwner, poolAsBorrower, borrower } = await fundedFixture();
 
-      await poolAsLp.write.deposit([amount(100)]);
-      const poolAsOwner = await viem.getContractAt(
-        "AjoCredPool",
-        pool.address,
-        {
-          client: { wallet: owner },
-        },
-      );
+      // Cap is generous, but only 1000 was deposited.
       await poolAsOwner.write.setBorrowingCap([
+        COOP_ID,
         borrower.account.address,
-        amount(1000),
+        amount(5000),
       ]);
 
       await viem.assertions.revertWith(
-        poolAsBorrower.write.borrow([amount(101)]),
+        poolAsBorrower.write.borrow([COOP_ID, amount(1001)]),
         "AjoCred: insufficient liquidity",
       );
     });
 
     it("reverts when the borrower is not compliant", async () => {
-      const {
-        poolAsLp,
-        poolAsBorrower,
-        borrower,
-        owner,
-        pool,
-        validatorAsAdmin,
-      } = await networkHelpers.loadFixture(deployPoolFixture);
+      const { poolAsOwner, poolAsBorrower, borrower, validator } =
+        await fundedFixture();
 
-      await poolAsLp.write.deposit([amount(1000)]);
-      const poolAsOwner = await viem.getContractAt(
-        "AjoCredPool",
-        pool.address,
-        {
-          client: { wallet: owner },
-        },
-      );
       await poolAsOwner.write.setBorrowingCap([
+        COOP_ID,
         borrower.account.address,
         amount(200),
       ]);
-      await validatorAsAdmin.write.setCompliant([
-        borrower.account.address,
-        false,
-      ]);
+      await validator.write.setCompliant([borrower.account.address, false]);
 
       await viem.assertions.revertWith(
-        poolAsBorrower.write.borrow([amount(100)]),
+        poolAsBorrower.write.borrow([COOP_ID, amount(100)]),
         "AjoCred: A-Pass not qualified",
       );
     });
   });
 
   describe("repay", () => {
-    it("reduces the borrower's outstanding balance", async () => {
-      const { pool, poolAsLp, poolAsBorrower, borrower, owner } =
-        await networkHelpers.loadFixture(deployPoolFixture);
-
-      await poolAsLp.write.deposit([amount(1000)]);
-      const poolAsOwner = await viem.getContractAt(
-        "AjoCredPool",
-        pool.address,
-        {
-          client: { wallet: owner },
-        },
-      );
-      await poolAsOwner.write.setBorrowingCap([
-        borrower.account.address,
+    async function borrowedFixture() {
+      const base = await networkHelpers.loadFixture(deployPoolFixture);
+      await base.poolAsAdmin.write.deposit([COOP_ID, amount(1000)]);
+      await base.poolAsOwner.write.setBorrowingCap([
+        COOP_ID,
+        base.borrower.account.address,
         amount(200),
       ]);
-      await poolAsBorrower.write.borrow([amount(150)]);
+      await base.poolAsBorrower.write.borrow([COOP_ID, amount(150)]);
+      return base;
+    }
 
+    it("reduces debt and charges a flat 5% interest fee", async () => {
+      const { pool, poolAsBorrower, borrower } = await borrowedFixture();
+
+      // Repay 100 principal → fee = 100 * 5% = 5.
       await viem.assertions.emitWithArgs(
-        poolAsBorrower.write.repay([amount(100)]),
+        poolAsBorrower.write.repay([COOP_ID, amount(100)]),
         pool,
         "Repaid",
-        [getAddress(borrower.account.address), amount(100)],
+        [COOP_ID, getAddress(borrower.account.address), amount(100), amount(5)],
       );
 
       assert.equal(
-        await pool.read.borrowings([borrower.account.address]),
+        await pool.read.borrowings([COOP_ID, borrower.account.address]),
         amount(50),
       );
-      assert.equal(await pool.read.totalBorrowings(), amount(50));
+      // Liquidity: 1000 - 150 borrowed + (100 principal + 5 fee) = 955.
+      const coop = await pool.read.getCooperative([COOP_ID]);
+      assert.equal(coop.totalLiquidity, amount(955));
     });
 
     it("reverts when repaying more than the outstanding debt", async () => {
-      const { poolAsBorrower } =
-        await networkHelpers.loadFixture(deployPoolFixture);
+      const { poolAsBorrower } = await borrowedFixture();
 
       await viem.assertions.revertWith(
-        poolAsBorrower.write.repay([amount(1)]),
+        poolAsBorrower.write.repay([COOP_ID, amount(151)]),
         "AjoCred: repay exceeds debt",
       );
     });
   });
 
   describe("withdraw", () => {
-    it("allows an LP to withdraw up to their deposited balance", async () => {
-      const { pool, poolAsLp, lp, token } =
+    it("allows the admin to withdraw up to coop liquidity", async () => {
+      const { pool, poolAsAdmin, coopAdmin, token } =
         await networkHelpers.loadFixture(deployPoolFixture);
 
-      await poolAsLp.write.deposit([amount(1000)]);
+      await poolAsAdmin.write.deposit([COOP_ID, amount(1000)]);
 
       await viem.assertions.emitWithArgs(
-        poolAsLp.write.withdraw([amount(400)]),
+        poolAsAdmin.write.withdraw([COOP_ID, amount(400)]),
         pool,
         "Withdrawn",
-        [getAddress(lp.account.address), amount(400)],
+        [COOP_ID, getAddress(coopAdmin.account.address), amount(400)],
       );
 
-      assert.equal(await pool.read.deposits([lp.account.address]), amount(600));
+      const coop = await pool.read.getCooperative([COOP_ID]);
+      assert.equal(coop.totalLiquidity, amount(600));
       assert.equal(await token.read.balanceOf([pool.address]), amount(600));
-      assert.equal(
-        await token.read.balanceOf([lp.account.address]),
-        amount(10_000) - amount(600),
-      );
     });
 
-    it("reverts when withdrawing more than deposited", async () => {
-      const { poolAsLp } = await networkHelpers.loadFixture(deployPoolFixture);
-
-      await poolAsLp.write.deposit([amount(100)]);
-
-      await viem.assertions.revertWith(
-        poolAsLp.write.withdraw([amount(101)]),
-        "AjoCred: withdraw exceeds balance",
-      );
-    });
-
-    it("reverts when pool liquidity has been lent out", async () => {
-      const { poolAsLp, poolAsBorrower, borrower, owner, pool } =
+    it("reverts when a non-admin tries to withdraw", async () => {
+      const { poolAsAdmin, poolAsBorrower } =
         await networkHelpers.loadFixture(deployPoolFixture);
 
-      await poolAsLp.write.deposit([amount(1000)]);
-      const poolAsOwner = await viem.getContractAt(
-        "AjoCredPool",
-        pool.address,
-        {
-          client: { wallet: owner },
-        },
-      );
-      await poolAsOwner.write.setBorrowingCap([
-        borrower.account.address,
-        amount(900),
-      ]);
-      await poolAsBorrower.write.borrow([amount(900)]);
+      await poolAsAdmin.write.deposit([COOP_ID, amount(1000)]);
 
       await viem.assertions.revertWith(
-        poolAsLp.write.withdraw([amount(200)]),
+        poolAsBorrower.write.withdraw([COOP_ID, amount(100)]),
+        "AjoCred: only cooperative admin",
+      );
+    });
+
+    it("reverts when withdrawing more than coop liquidity", async () => {
+      const { poolAsAdmin } =
+        await networkHelpers.loadFixture(deployPoolFixture);
+
+      await poolAsAdmin.write.deposit([COOP_ID, amount(100)]);
+
+      await viem.assertions.revertWith(
+        poolAsAdmin.write.withdraw([COOP_ID, amount(101)]),
         "AjoCred: insufficient liquidity",
       );
     });
   });
 
-  describe("admin", () => {
+  describe("cooperative admin controls", () => {
     it("only lets the owner set a borrowing cap", async () => {
       const { poolAsOther, other } =
         await networkHelpers.loadFixture(deployPoolFixture);
 
       await viem.assertions.revertWithCustomError(
-        poolAsOther.write.setBorrowingCap([other.account.address, amount(100)]),
+        poolAsOther.write.setBorrowingCap([
+          COOP_ID,
+          other.account.address,
+          amount(100),
+        ]),
         poolAsOther,
         "OwnableUnauthorizedAccount",
       );
     });
 
-    it("forwards rule management calls to the validator", async () => {
-      const { pool, owner, validator } =
+    it("lets the coop admin update its config but not an outsider", async () => {
+      const { pool, poolAsAdmin, poolAsOther } =
         await networkHelpers.loadFixture(deployPoolFixture);
 
-      const poolAsOwner = await viem.getContractAt(
-        "AjoCredPool",
-        pool.address,
-        {
-          client: { wallet: owner },
-        },
+      await poolAsAdmin.write.updateCooperativeConfig([
+        COOP_ID,
+        amount(8000),
+        3,
+      ]);
+      const coop = await pool.read.getCooperative([COOP_ID]);
+      assert.equal(coop.maxLiquidity, amount(8000));
+      assert.equal(coop.minTier, 3);
+
+      await viem.assertions.revertWith(
+        poolAsOther.write.updateCooperativeConfig([COOP_ID, amount(1), 0]),
+        "AjoCred: not authorized",
       );
+    });
+
+    it("rejects a cap set below current liquidity", async () => {
+      const { poolAsAdmin } =
+        await networkHelpers.loadFixture(deployPoolFixture);
+
+      await poolAsAdmin.write.deposit([COOP_ID, amount(1000)]);
+
+      await viem.assertions.revertWith(
+        poolAsAdmin.write.updateCooperativeConfig([COOP_ID, amount(500), 0]),
+        "AjoCred: cap below current liquidity",
+      );
+    });
+
+    it("blocks deposits into a paused cooperative", async () => {
+      const { poolAsOwner, poolAsAdmin } =
+        await networkHelpers.loadFixture(deployPoolFixture);
+
+      await poolAsOwner.write.setCooperativeActive([COOP_ID, false]);
+
+      await viem.assertions.revertWith(
+        poolAsAdmin.write.deposit([COOP_ID, amount(100)]),
+        "AjoCred: inactive cooperative",
+      );
+    });
+
+    it("forwards rule management calls to the validator", async () => {
+      const { pool, poolAsOwner, validator } =
+        await networkHelpers.loadFixture(deployPoolFixture);
 
       const rule = {
         allowedGroup: "0x0000",

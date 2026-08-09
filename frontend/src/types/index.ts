@@ -52,13 +52,31 @@ export interface VerifyResult {
   valid: boolean;
 }
 
-export interface PoolStats {
-  totalDeposits: string;
-  totalBorrowings: string;
-  availableLiquidity: string;
+/** A cooperative's on-chain record (bigints serialized as strings). */
+export interface Cooperative {
+  id: string;
+  admin: string;
+  totalLiquidity: string;
+  maxLiquidity: string;
+  minTier: number;
+  active: boolean;
 }
 
-export interface UserPoolPosition {
+/** Per-cooperative liquidity snapshot for the browse/detail views. */
+export interface CooperativeStats {
+  id: string;
+  /** Currently lendable liquidity in the cooperative's pool (base units). */
+  totalLiquidity: string;
+  maxLiquidity: string;
+  /** Room left under the cooperative's ceiling (maxLiquidity − totalLiquidity). */
+  availableCapacity: string;
+  minTier: number;
+  active: boolean;
+}
+
+/** A member's position within one cooperative (base units as strings). */
+export interface UserCoopPosition {
+  coopId: string;
   deposit: string;
   borrowing: string;
   borrowingCap: string;
@@ -89,10 +107,10 @@ export interface FreezeResult {
 }
 
 export interface TravelRuleResult {
-  success: boolean;
-  txHash: string;
-  reportUrl?: string;
-  data?: any;
+  /** Token-based, time-limited download link from Cleanverse (`data.downloadUrl`). */
+  downloadUrl?: string;
+  /** Suggested file name for the report (`data.fileName`). */
+  fileName?: string;
 }
 
 export interface RampQuote {

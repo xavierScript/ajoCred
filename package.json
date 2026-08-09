@@ -5,6 +5,6 @@
     "contracts",
     "backend",
     "frontend",
-    "shared"
+    "admin-dashboard"
   ]
 }

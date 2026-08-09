@@ -18,7 +18,7 @@ export function EligibilityCard({ data }: { data: EligibilityResult }) {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle>Borrowing eligibility</CardTitle>
+        <CardTitle>Credit limit calculation</CardTitle>
         <Badge tone={eligible ? "success" : "warning"} dot>
           {eligible ? "Eligible" : "Not yet eligible"}
         </Badge>
@@ -26,10 +26,10 @@ export function EligibilityCard({ data }: { data: EligibilityResult }) {
       <CardBody className="space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <Stat
-            label="Your borrowing limit"
+            label="Your calculated limit"
             value={formatAmount(borrowingLimit)}
-            unit="aUSDC"
-            hint={`Based on ${breakdown.lookbackMonths} months of verified inflows`}
+            unit="USD"
+            hint={`Based on ${breakdown.lookbackMonths} months of verified incoming transfers`}
             emphasis
           />
           {eligible && (
@@ -45,12 +45,12 @@ export function EligibilityCard({ data }: { data: EligibilityResult }) {
         <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-3">
           <Metric
             icon={<TrendingUp className="size-4" />}
-            label="Total inflow"
-            value={`${formatAmount(breakdown.totalInflow)} aUSDC`}
+            label="Total received"
+            value={`${formatAmount(breakdown.totalInflow)} USD`}
           />
           <Metric
             icon={<Receipt className="size-4" />}
-            label="Inbound transfers"
+            label="Transfers received"
             value={String(breakdown.inflowTxCount)}
           />
           <Metric
@@ -62,8 +62,8 @@ export function EligibilityCard({ data }: { data: EligibilityResult }) {
 
         {!eligible && (
           <p className="text-sm text-muted-foreground">
-            We couldn't find enough verified inbound remittances to set a limit yet. As your
-            receiving history grows, your limit will too.
+            We couldn't find enough verified incoming money transfers to set a limit yet. As your
+            transfer history grows, your limit will too.
           </p>
         )}
       </CardBody>

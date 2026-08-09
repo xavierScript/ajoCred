@@ -13,6 +13,11 @@ export const AUSDC_ADDRESS = import.meta.env
 export const CHAIN = baseSepolia;
 export const EXPLORER_URL = baseSepolia.blockExplorers.default.url;
 
+// Flat interest fee the pool charges on repayment, in basis points (mirrors
+// AjoCredPool.INTEREST_BPS). Repay pulls principal + this fee, so the ERC-20
+// allowance must cover both.
+export const INTEREST_BPS = 500;
+
 export const poolAbi = poolAbiJson;
 export const erc20Abi = erc20AbiJson;
 

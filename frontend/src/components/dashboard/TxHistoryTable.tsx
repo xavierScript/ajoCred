@@ -70,7 +70,7 @@ export function TxHistoryTable({ txs, account }: TxHistoryTableProps) {
                 </td>
                 <td className="py-3.5 px-4">
                   {isOutbound ? (
-                    <TravelRuleButton txHash={tx.hash} />
+                    <TravelRuleButton txHash={tx.hash} account={account} />
                   ) : (
                     <span className="text-xs text-muted-foreground">N/A (Inbound)</span>
                   )}
@@ -95,16 +95,16 @@ export function TxHistoryTable({ txs, account }: TxHistoryTableProps) {
   );
 }
 
-function TravelRuleButton({ txHash }: { txHash: string }) {
+function TravelRuleButton({ txHash, account }: { txHash: string; account: string }) {
   const travelRule = useTravelRule();
 
   const handleDownload = async () => {
     try {
-      const res = await travelRule.mutateAsync(txHash);
-      if (res.reportUrl) {
-        window.open(res.reportUrl, "_blank");
+      const res = await travelRule.mutateAsync({ txHash, address: account });
+      if (res.downloadUrl) {
+        window.open(res.downloadUrl, "_blank");
       } else {
-        alert("Travel Rule report generated successfully for tx " + txHash.slice(0, 10) + "...");
+        alert("Travel Rule report is not available for this transaction type.");
       }
     } catch {
       /* handled */

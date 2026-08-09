@@ -1,11 +1,12 @@
 import type {
   ApassData,
+  Cooperative,
+  CooperativeStats,
   DepositAddressResult,
   EligibilityResult,
   FaucetResult,
-  PoolStats,
   QueryTxsResult,
-  UserPoolPosition,
+  UserCoopPosition,
   VerifyResult,
   FreezeResult,
   TravelRuleResult,
@@ -67,8 +68,11 @@ export const api = {
   transactions: {
     query: (address: string, chain = "base") =>
       request<QueryTxsResult>(`/api/transactions/${address}?chain=${chain}`),
-    travelRule: (txHash: string) =>
-      request<TravelRuleResult>(`/api/transactions/travel-rule/${txHash}`),
+    travelRule: (txHash: string, address: string, chain = "base") =>
+      request<TravelRuleResult>(
+        `/api/transactions/travel-rule/${txHash}?address=${address}&chain=${chain}`,
+        { method: "POST" },
+      ),
   },
   eligibility: {
     get: (address: string, chain = "base") =>
@@ -81,12 +85,17 @@ export const api = {
         body: JSON.stringify({ userAddress, chain }),
       }),
   },
+  cooperatives: {
+    list: () => request<Cooperative[]>("/api/cooperatives"),
+    get: (id: string) => request<Cooperative>(`/api/cooperatives/${id}`),
+    stats: (id: string) =>
+      request<CooperativeStats>(`/api/cooperatives/${id}/stats`),
+    position: (id: string, address: string) =>
+      request<UserCoopPosition>(`/api/cooperatives/${id}/position/${address}`),
+  },
   pool: {
-    stats: () => request<PoolStats>("/api/pool/stats"),
-    position: (address: string) =>
-      request<UserPoolPosition>(`/api/pool/position/${address}`),
-    setCap: (address: string, cap: string) =>
-      request<{ txHash: string }>("/api/pool/set-cap", {
+    setCap: (coopId: string, address: string, cap: string) =>
+      request<{ txHash: string }>(`/api/pool/${coopId}/set-cap`, {
         method: "POST",
         body: JSON.stringify({ address, cap }),
       }),

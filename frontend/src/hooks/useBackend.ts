@@ -2,9 +2,12 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import type {
   ApassData,
+  Cooperative,
+  CooperativeStats,
   DepositAddressResult,
   EligibilityResult,
   QueryTxsResult,
+  UserCoopPosition,
   VerifyResult,
   FaucetResult,
   FreezeResult,
@@ -52,8 +55,9 @@ export function useTransactions(address?: string) {
 }
 
 export function useTravelRule() {
-  return useMutation<TravelRuleResult, ApiError, string>({
-    mutationFn: (txHash: string) => api.transactions.travelRule(txHash),
+  return useMutation<TravelRuleResult, ApiError, { txHash: string; address: string; chain?: string }>({
+    mutationFn: ({ txHash, address, chain }) =>
+      api.transactions.travelRule(txHash, address, chain),
   });
 }
 
@@ -93,9 +97,53 @@ export function useDepositAddress(address?: string) {
   });
 }
 
+export function useCooperatives() {
+  return useQuery<Cooperative[], ApiError>({
+    queryKey: ["cooperatives"],
+    queryFn: () => api.cooperatives.list(),
+    retry: retryUnlessClientError,
+    staleTime: 30_000,
+  });
+}
+
+export function useCooperative(id?: string) {
+  return useQuery<Cooperative, ApiError>({
+    queryKey: ["cooperative", id],
+    queryFn: () => api.cooperatives.get(id!),
+    enabled: !!id,
+    retry: retryUnlessClientError,
+    staleTime: 30_000,
+  });
+}
+
+export function useCoopStats(id?: string) {
+  return useQuery<CooperativeStats, ApiError>({
+    queryKey: ["coop-stats", id],
+    queryFn: () => api.cooperatives.stats(id!),
+    enabled: !!id,
+    retry: retryUnlessClientError,
+    staleTime: 15_000,
+  });
+}
+
+export function useCoopPosition(id?: string, address?: string) {
+  return useQuery<UserCoopPosition, ApiError>({
+    queryKey: ["coop-position", id, address],
+    queryFn: () => api.cooperatives.position(id!, address!),
+    enabled: !!id && !!address,
+    retry: retryUnlessClientError,
+    staleTime: 15_000,
+  });
+}
+
 export function useSetCap() {
-  return useMutation<{ txHash: string }, ApiError, { address: string; cap: string }>({
-    mutationFn: ({ address, cap }) => api.pool.setCap(address, cap),
+  return useMutation<
+    { txHash: string },
+    ApiError,
+    { coopId: string; address: string; cap: string }
+  >({
+    mutationFn: ({ coopId, address, cap }) =>
+      api.pool.setCap(coopId, address, cap),
   });
 }
 

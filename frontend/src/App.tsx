@@ -2,12 +2,13 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { Web3Provider } from "@/providers/Web3Provider";
 import { ToastProvider } from "@/components/ui/Toast";
+import { SelectedCoopProvider } from "@/hooks/useSelectedCoop";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RequireWallet } from "@/components/RequireWallet";
 import { LandingPage } from "@/pages/Landing";
 import { OnboardPage } from "@/pages/Onboard";
 import { DashboardPage } from "@/pages/Dashboard";
-import { DepositPage } from "@/pages/Deposit";
+import { CooperativesPage } from "@/pages/Cooperatives";
 import { BorrowPage } from "@/pages/Borrow";
 import { RampPage } from "@/pages/Ramp";
 
@@ -29,10 +30,10 @@ const router = createBrowserRouter([
       {
         element: (
           <RequireWallet>
-            <DepositPage />
+            <CooperativesPage />
           </RequireWallet>
         ),
-        path: "deposit",
+        path: "cooperatives",
       },
       {
         element: (
@@ -58,9 +59,11 @@ export default function App() {
   return (
     <ThemeProvider>
       <Web3Provider>
-        <ToastProvider>
-          <RouterProvider router={router} />
-        </ToastProvider>
+        <SelectedCoopProvider>
+          <ToastProvider>
+            <RouterProvider router={router} />
+          </ToastProvider>
+        </SelectedCoopProvider>
       </Web3Provider>
     </ThemeProvider>
   );

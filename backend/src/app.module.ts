@@ -8,8 +8,10 @@ import { ValidatorModule } from './validator/validator.module';
 import { FaucetModule } from './faucet/faucet.module';
 import { EligibilityModule } from './eligibility/eligibility.module';
 import { PoolModule } from './pool/pool.module';
+import { CooperativeModule } from './cooperative/cooperative.module';
 import { AdminModule } from './admin/admin.module';
 import { RampModule } from './ramp/ramp.module';
+import { WhitelistModule } from './whitelist/whitelist.module';
 
 @Module({
   imports: [
@@ -24,8 +26,10 @@ import { RampModule } from './ramp/ramp.module';
     FaucetModule,
     EligibilityModule,
     PoolModule,
+    CooperativeModule,
     AdminModule,
     RampModule,
+    WhitelistModule,
   ],
 })
 export class AppModule {}

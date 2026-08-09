@@ -9,6 +9,19 @@ export default () => ({
   admin: {
     apiKey: process.env.ADMIN_API_KEY ?? '',
   },
+  eligibility: {
+    // Configurable lookback window (brief §6). Production default ~6 months;
+    // compress via env for the demo (e.g. OBSERVATION_WINDOW_SECONDS=3600).
+    observationWindowSeconds: parseInt(
+      process.env.OBSERVATION_WINDOW_SECONDS ?? '15552000',
+      10,
+    ),
+    // Minimum qualifying inbound deposits before a wallet becomes eligible.
+    minQualifyingDeposits: parseInt(
+      process.env.MIN_QUALIFYING_DEPOSITS ?? '3',
+      10,
+    ),
+  },
   chain: {
     rpcUrl: process.env.BASE_SEPOLIA_RPC_URL,
     poolOwnerPrivateKey: process.env.POOL_OWNER_PRIVATE_KEY,
