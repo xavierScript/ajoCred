@@ -6,25 +6,15 @@ import { createCDPEmbeddedWalletConnector } from "@coinbase/cdp-wagmi";
 const cdpProjectId = import.meta.env.VITE_CDP_PROJECT_ID;
 const walletConnectProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
 
-const validCdpId =
-  typeof cdpProjectId === "string" &&
-  cdpProjectId.trim() !== "" &&
-  cdpProjectId !== "undefined";
-
-const validWcId =
-  typeof walletConnectProjectId === "string" &&
-  walletConnectProjectId.trim() !== "" &&
-  walletConnectProjectId !== "undefined";
-
 const transports = {
   [baseSepolia.id]: http(),
 };
 
-const cdpConnector = validCdpId
+const cdpConnector = cdpProjectId
   ? [
       createCDPEmbeddedWalletConnector({
         cdpConfig: {
-          projectId: cdpProjectId.trim(),
+          projectId: cdpProjectId,
           ethereum: { createOnLogin: "eoa" },
         },
         providerConfig: {
@@ -36,8 +26,8 @@ const cdpConnector = validCdpId
     ]
   : [];
 
-const walletConnectConnector = validWcId
-  ? [walletConnect({ projectId: walletConnectProjectId.trim() })]
+const walletConnectConnector = walletConnectProjectId
+  ? [walletConnect({ projectId: walletConnectProjectId })]
   : [];
 
 export const wagmiConfig = createConfig({
