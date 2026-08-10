@@ -66,10 +66,7 @@ Transparent evaluation of current technical limitations during the hacking windo
 1. **Single-Contract Mode vs. Factory Mode Tradeoff (`registerApass` & `0xa6725971`):**
    Cleanverse's `aUSDC` token contract enforces automatic compliance on transfers into smart contract addresses via `registerApass(pool, aToken)`, which can only be called by a Factory contract holding Cleanverse's `REGISTER_ROLE`. We deliberately architected AjoCred using **Single-Contract Mode** to eliminate external factory dependencies and maintain multi-tenant internal accounting within one deployment. The tradeoff is that without Factory-level `registerApass` vault pairing, `aUSDC.transferFrom` into the contract custodian reverts on-chain with custom error `0xa6725971`.
 
-2. **Monad Testnet Gateway Relayer Balance:**
-   `AjoCredPool.sol` compiled and deployed cleanly to Monad Testnet (`0x791fd2924c92d43d3fca56681412beea548f75f3`). However, Cleanverse's API gateway returned code `12026` (`Signer had insufficient balance`), indicating that Cleanverse's background hot-wallet relayer on Monad Testnet requires a testnet MON top-up from infra operations.
-
-3. **Coinbase Identity Regional Availability:**
+2. **Coinbase Identity Regional Availability:**
    CDP Embedded Wallet authentication (email sign-in) is complete and operational. Coinbase's native identity verification service is currently awaiting regional availability expansion into Nigeria.
 
 ---
